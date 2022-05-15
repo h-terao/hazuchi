@@ -1,7 +1,7 @@
 from torch.utils import data
 import numpy as np
 
-from hazuchi.torch_utils import collate_fun
+from hazuchi.torch_utils import torch_utils
 
 # import torch.multiprocessing as multiprocessing
 
@@ -34,7 +34,7 @@ def main():
         NumpyDataSet(1000),
         batch_size=64,
         shuffle=True,
-        collate_fn=collate_fun,
+        collate_fn=torch_utils,
         drop_last=True,
         num_workers=4,
     )
