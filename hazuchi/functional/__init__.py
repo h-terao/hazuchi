@@ -1,3 +1,5 @@
+# flake8: noqa
+
 # Loss
 from .absolute_error import absolute_error
 from .divergence import kl_div, js_div, cross_entropy

@@ -31,10 +31,6 @@ setup(
             "flake8",
             "black",
         ],
-        "exp": [
-            "hub",
-            "tensorflow",
-        ],
     },
     packages=["hazuchi"],
     classifiers=[
