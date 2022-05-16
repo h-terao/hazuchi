@@ -19,10 +19,12 @@ __all__ = [
 
 def random_crop(rng: chex.PRNGKey, img: chex.Array, size: tuple[int, int]) -> chex.Array:
     """Randomly crop the given image into the patch.
+    
     Args:
         rng (PRNGKey): A PRNG key.
         img (array): Image to crop.
         size (tuple of int): Output size (height, width).
+    
     Returns:
         The cropped image.
     """
@@ -42,9 +44,11 @@ def random_crop(rng: chex.PRNGKey, img: chex.Array, size: tuple[int, int]) -> ch
 
 def center_crop(img: chex.Array, size: tuple[int, int]) -> chex.Array:
     """Crop the given image into the central patch.
+    
     Args:
         img (array): Image to crop.
         size (tuple of int): Output size.
+    
     Returns:
         The cropped image.
     """
@@ -63,12 +67,16 @@ def center_crop(img: chex.Array, size: tuple[int, int]) -> chex.Array:
 def three_crop(
     img: chex.Array, size: tuple[int, int], interpolation="nearest"
 ) -> tuple[chex.Array, ...]:
-    """Crop the given image into three crop to cover the entire of image,
-       and resize them into the desired size.
-       Currently, only square size (size[0]==size[1]) is supported.
+    """Apply three crop operation.
+    
+    Crop the given image into three crop to cover the entire of image,
+    and resize them into the desired size. Currently, only square size 
+    (i.e., size[0]==size[1]) is supported.
+    
     Args:
         img (array): Image to crop.
         size (tuple of int): Output size. It must be the square.
+    
     Returns:
         Tuple of the cropped images.
     """
@@ -134,10 +142,14 @@ def three_crop(
 
 
 def five_crop(img: chex.Array, size: tuple[int, int]) -> tuple[chex.Array, ...]:
-    """Crop the given image into four courners and the central crop.
+    """Apply five crop operation.
+    
+    Crop the given image into four courners and the central crop.
+    
     Args:
         img (array): Image to crop.
         size (tuple of int): Output size.
+    
     Returns:
         Tuple of the cropped images.
     """
@@ -200,12 +212,16 @@ def five_crop(img: chex.Array, size: tuple[int, int]) -> tuple[chex.Array, ...]:
 def ten_crop(
     img: chex.Array, size: tuple[int, int], vertical: bool = False
 ) -> tuple[chex.Array, ...]:
-    """Crop the given image into four corners and the central crop plus the flipped version of them.
+    """Apply ten crop operation to images.
+    
+    Crop the given image into four corners and the central crop plus the flipped version of them.
+    
     Args:
         img (array): Image to crop.
         size (tuple of int): Output size.
         vertical (bool): If True, use vertical flip to crop.
                          Otherwise, use horizontal flip.
+    
     Returns:
         Tuple of the cropped images.
     """
