@@ -32,7 +32,7 @@ setup(
             "black",
         ],
     },
-    packages=find_packages(where="hazuchi"),  # ["hazuchi"],
+    packages=["hazuchi"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
