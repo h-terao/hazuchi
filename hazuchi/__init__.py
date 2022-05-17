@@ -1,6 +1,5 @@
 # flake8: noqa
-from .trainer import Trainer
-from .observation import Observation
+
 from . import (
     callbacks,
     functional,
@@ -8,3 +7,5 @@ from . import (
     torch_utils,
     image,
 )
+from .trainer import Trainer
+from .observation import Observation
