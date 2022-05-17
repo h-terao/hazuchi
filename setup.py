@@ -1,11 +1,11 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 AUTHOR = "TERAO Hayato"
 AUTHOR_EMAIL = ""
 
-URL = "https://github.com/c60evaporator/seaborn-analyzer"
+URL = "https://github.com/h-terao/hazuchi"
 LICENSE = "MIT License"
-DOWNLOAD_URL = "https://github.com/c60evaporator/seaborn-analyzer"
+DOWNLOAD_URL = "hoge"
 
 
 def _requires_from_file(filename):
@@ -32,7 +32,7 @@ setup(
             "black",
         ],
     },
-    packages=["hazuchi"],
+    packages=find_packages(where="hazuchi"),  # ["hazuchi"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
