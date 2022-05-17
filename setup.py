@@ -32,7 +32,15 @@ setup(
             "black",
         ],
     },
-    packages=find_packages(),  
+    packages=[
+        "hazuchi",
+        "hazuchi.callbacks",
+        "hazuchi.functional",
+        "hazuchi.image",
+        "hazuchi.image.transforms",
+        "hazuchi.torch_utils",
+        "hazuchi.utils",
+    ],  
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
