@@ -32,8 +32,8 @@ setup(
             "black",
         ],
     },
-    packages=find_packages(),  #["hazuchi"],
-    package_dir={"": "hazuchi"}
+    packages=find_packages(),  
+    package_dir={"": "hazuchi"},
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
