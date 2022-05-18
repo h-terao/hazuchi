@@ -48,9 +48,7 @@ def split_batch(batch: Batch, chunk_size: int = None) -> tuple[Batch | None, Bat
 
     if main_size > 0:
         main_batch = jax.tree_map(
-            lambda x: jnp.reshape(
-                x[:main_size], (chunk_size, batch_size // chunk_size) + x.shape[1:]
-            ),
+            lambda x: jnp.reshape(x[:main_size], (chunk_size, batch_size // chunk_size) + x.shape[1:]),
             batch,
         )
     else:
@@ -105,9 +103,7 @@ class Trainer:
         self.test_steps_per_epoch = None
 
     def callbacks(self, reverse: bool = False):
-        for callback in sorted(
-            self._callbacks.values(), key=lambda v: v.priority, reverse=not reverse
-        ):
+        for callback in sorted(self._callbacks.values(), key=lambda v: v.priority, reverse=not reverse):
             yield callback
 
     def fit(
@@ -221,9 +217,7 @@ class Trainer:
                 train_state, obs = self.train_fun(train_state, remain_batch)
                 step_observation += obs / num_devices
 
-            summary = step_observation.scalar_summary(
-                prefix=prefix, step=self.global_step, epoch=self.current_epoch
-            )
+            summary = step_observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
             for callback in self.callbacks():
                 train_state, summary = callback.on_train_step_end(self, train_state, summary)
 
@@ -232,9 +226,7 @@ class Trainer:
             if batch_idx + 1 == train_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(
-            prefix=prefix, step=self.global_step, epoch=self.current_epoch
-        )
+        summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
         for callback in self.callbacks():
             train_state, summary = callback.on_train_epoch_end(self, train_state, summary)
 
@@ -260,9 +252,7 @@ class Trainer:
             if remain_batch is not None:
                 step_observation += self.eval_fun(train_state, remain_batch) / num_devices
 
-            summary = observation.scalar_summary(
-                prefix=prefix, step=self.global_step, epoch=self.current_epoch
-            )
+            summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
             for callback in self.callbacks():
                 train_state, summary = callback.on_val_step_end(self, train_state, summary)
 
@@ -270,17 +260,13 @@ class Trainer:
             if batch_idx + 1 == val_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(
-            prefix=prefix, step=self.global_step, epoch=self.current_epoch
-        )
+        summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
         for callback in self.callbacks():
             train_state, summary = callback.on_val_epoch_end(self, train_state, summary)
 
         return train_state, summary
 
-    def test_loop(
-        self, train_state, dataset, test_fun: EvalFun | None, prefix: str, test_steps_per_epoch: int
-    ):
+    def test_loop(self, train_state, dataset, test_fun: EvalFun | None, prefix: str, test_steps_per_epoch: int):
         if test_fun is None:
             test_fun = self.eval_fun
 
@@ -303,9 +289,7 @@ class Trainer:
             if remain_batch is not None:
                 step_observation += test_fun(train_state, remain_batch) / num_devices
 
-            summary = observation.scalar_summary(
-                prefix=prefix, step=self.global_step, epoch=self.current_epoch
-            )
+            summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
             for callback in self.callbacks():
                 train_state, summary = callback.on_test_step_end(self, train_state, summary)
 
@@ -313,9 +297,7 @@ class Trainer:
             if batch_idx + 1 == test_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(
-            prefix=prefix, step=self.global_step, epoch=self.current_epoch
-        )
+        summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
         for callback in self.callbacks():
             train_state, summary = callback.on_test_epoch_end(self, train_state, summary)
 
@@ -332,7 +314,7 @@ class Trainer:
             to_save["callbacks"][key] = callback.to_state_dict()
         return to_save
 
-    def from_state_dict(self, state: dict[str, Any]) -> None:
+    def from_state_dict(self, state: dict[str, Any]) -> Trainer:
         self.global_step = state["global_step"]
         self.current_epoch = state["current_epoch"]
         self.fitted = state["fitted"]
@@ -343,6 +325,7 @@ class Trainer:
                 print("Failed to load...")
             else:
                 callback.from_state_dict(callback_state)
+        return self
 
     def log_hyperparams(self, config):
         for callback in self.callbacks():
