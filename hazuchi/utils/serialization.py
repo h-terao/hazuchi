@@ -1,7 +1,8 @@
 from __future__ import annotations
+import pickle
+
 from flax.training.train_state import TrainState
 from flax.serialization import to_state_dict, from_state_dict
-import joblib
 from ..trainer import Trainer
 
 
@@ -13,13 +14,16 @@ def save_checkpoint(file, trainer: Trainer, train_state: TrainState):
         "trainer": trainer.to_state_dict(),
         "train_state": to_state_dict(train_state),
     }
-    joblib.dump(checkpoint, file, compress=3)
+    with open(file, "wb") as fp:
+        pickle.dump(checkpoint, fp)
 
 
 def load_checkpoint(
     file, trainer: Trainer, train_state: TrainState, only_train_state: bool = False
 ) -> tuple[Trainer, TrainState]:
-    checkpoint = joblib.load(file)
+    with open(file, "rb") as fp:
+        checkpoint = pickle.load(fp)
+
     if not only_train_state:
         trainer.from_state_dict(checkpoint["trainer"])
     train_state = from_state_dict(trainer, checkpoint["train_state"])
