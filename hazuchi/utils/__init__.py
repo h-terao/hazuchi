@@ -1,4 +1,4 @@
 # flake8: noqa
 from .bind_rng_to_host_device import bind_rng_to_host_device
-from .count_param_size import count_param_size
+from .count_num_params import count_num_params
 from . import serialization
