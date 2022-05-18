@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from flax import core
 from rich.progress import (
     BarColumn,
     Progress,

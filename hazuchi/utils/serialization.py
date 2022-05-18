@@ -16,8 +16,11 @@ def save_checkpoint(file, trainer: Trainer, train_state: TrainState):
     joblib.dump(checkpoint, file, compress=3)
 
 
-def load_checkpoint(file, trainer: Trainer, train_state: TrainState) -> tuple[Trainer, TrainState]:
+def load_checkpoint(
+    file, trainer: Trainer, train_state: TrainState, only_train_state: bool = False
+) -> tuple[Trainer, TrainState]:
     checkpoint = joblib.load(file)
-    trainer.from_state_dict(checkpoint["trainer"])
+    if not only_train_state:
+        trainer.from_state_dict(checkpoint["trainer"])
     train_state = from_state_dict(trainer, checkpoint["train_state"])
     return trainer, train_state

@@ -4,6 +4,7 @@ import operator
 from pathlib import Path
 
 from flax.training.train_state import TrainState
+from flax import jax_utils
 from . import callback
 from ..trainer import Trainer
 from ..utils.serialization import load_checkpoint, save_checkpoint
@@ -15,6 +16,9 @@ class Checkpoint(callback.Callback):
         filename
         monitor (str | None): Name of metrics to monitor.
                               If None, save the latest checkpoint.
+
+    Todo:
+        Reprecated / not.
     """
 
     _priority: int = callback.PRIORITY_SNAPSHOT
@@ -25,36 +29,56 @@ class Checkpoint(callback.Callback):
         filename,
         monitor: str | None = None,
         mode: str = "min",
+        autoload_before_fit: bool = False,
+        autoload_before_test: bool = False,
     ) -> None:
         self.save_dir = save_dir
         self.filename = filename
-
         self.monitor = monitor
+        self.mode = mode
+        self.autoload_before_fit = autoload_before_fit
+        self.autoload_before_test = autoload_before_test
 
         self.compare = operator.lt if mode == "min" else operator.gt
         self.best_score = math.inf if mode == "min" else -math.inf
 
+    def on_fit_start(self, trainer, train_state):
+        if self.autoload_before_fit:
+            train_state = jax_utils.unreplicate(train_state)
+            trainer, train_state = self.load(trainer, train_state)
+            train_state = jax_utils.replicate(train_state)
+        return train_state
+
+    def on_test_start(self, trainer, train_state):
+        if self.autoload_before_test:
+            # Never update trainer before testing.
+            train_state = jax_utils.unreplicate(train_state)
+            trainer, train_state = self.load(trainer, train_state, only_train_state=True)
+            train_state = jax_utils.replicate(train_state)
+        return train_state
+
     def on_fit_epoch_end(self, trainer, train_state, summary):
         if self.monitor is None:
-            pass
+            self.save(trainer, jax_utils.unreplicate(train_state))
         elif self.monitor in summary:
             # best?
             if self.compare(summary[self.monitor], self.best_score):
                 self.best_score = summary[self.monitor]
-                self.save(trainer, train_state)
+                self.save(trainer, jax_utils.unreplicate(train_state))
         return train_state, summary
 
     def save(self, trainer: Trainer, train_state: TrainState) -> None:
         """Alias of utils.serialization.save_checkpoint."""
         ckpt_path = Path(self.save_dir, self.filename)
         ckpt_path.parent.mkdir(parents=True, exist_ok=True)
-
         save_checkpoint(ckpt_path, trainer, train_state)
 
-    def load(self, trainer: Trainer, train_state: TrainState, strict: bool = False) -> tuple[Trainer, TrainState]:
+    def load(
+        self, trainer: Trainer, train_state: TrainState, only_train_state: bool = False, strict: bool = False
+    ) -> tuple[Trainer, TrainState]:
         ckpt_path = Path(self.save_dir, self.filename)
         if ckpt_path.exists():
-            return load_checkpoint(ckpt_path, trainer, train_state)
+            return load_checkpoint(ckpt_path, trainer, train_state, only_train_state)
         elif not strict:
             return trainer, train_state
         else:
@@ -76,3 +100,7 @@ class Checkpoint(callback.Callback):
     @property
     def is_latest_checkpoint(self) -> bool:
         return self.monitor is None
+
+    @property
+    def checkpoint_exists(self) -> bool:
+        return Path(self.save_dir, self.filename).exists
