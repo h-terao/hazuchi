@@ -29,33 +29,14 @@ class Checkpoint(callback.Callback):
         filename,
         monitor: str | None = None,
         mode: str = "min",
-        autoload_before_fit: bool = False,
-        autoload_before_test: bool = False,
     ) -> None:
         self.save_dir = save_dir
         self.filename = filename
         self.monitor = monitor
         self.mode = mode
-        self.autoload_before_fit = autoload_before_fit
-        self.autoload_before_test = autoload_before_test
 
         self.compare = operator.lt if mode == "min" else operator.gt
         self.best_score = math.inf if mode == "min" else -math.inf
-
-    def on_fit_start(self, trainer, train_state):
-        if self.autoload_before_fit:
-            train_state = jax_utils.unreplicate(train_state)
-            trainer, train_state = self.load(trainer, train_state)
-            train_state = jax_utils.replicate(train_state)
-        return train_state
-
-    def on_test_start(self, trainer, train_state):
-        if self.autoload_before_test:
-            # Never update trainer before testing.
-            train_state = jax_utils.unreplicate(train_state)
-            trainer, train_state = self.load(trainer, train_state, only_train_state=True)
-            train_state = jax_utils.replicate(train_state)
-        return train_state
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
         if self.monitor is None:
@@ -104,3 +85,7 @@ class Checkpoint(callback.Callback):
     @property
     def checkpoint_exists(self) -> bool:
         return Path(self.save_dir, self.filename).exists
+
+    @property
+    def ckpt_path(self):
+        return Path(self.save_dir, self.filename)
