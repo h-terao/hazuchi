@@ -1,19 +1,22 @@
 # flake8: noqa
 
 # Loss
-from .absolute_error import absolute_error
-from .divergence import kl_div, js_div, cross_entropy
-from .squared_error import squared_error
-from .triplet_loss import triplet_loss
-from .huber_loss import huber_loss
-from .charbonnier_penalty import charbonnier_penalty
-from .weight_decay_loss import weight_decay_loss
+from .absolute_error import *
+from .divergence import *
+from .cross_entropy import *
+from .squared_error import *
+from .triplet_loss import *
+from .huber_loss import *
+from .charbonnier_penalty import *
+from .weight_decay_loss import *
 
 # Evaluation
-from .accuracy import accuracy
+from .accuracy import *
 
 # Noise
-from .vat_noise import vat_noise
+from .vat_noise import *
 
 # Array
-from .permute import permutate
+from .permute import *
+from .one_hot import *
+from .shift import *

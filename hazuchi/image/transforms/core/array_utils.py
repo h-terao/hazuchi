@@ -1,6 +1,8 @@
 from __future__ import annotations
 import chex
 
+__all__ = ["flatten", "unflatten", "blend"]
+
 
 def flatten(img: chex.Array) -> tuple[chex.Array, tuple[int, ...]]:
     """convert [..., H, W, C] -> [N, H, W, C]."""
@@ -18,3 +20,8 @@ def unflatten(
     if clip_val:
         img = img.clip(0, 1)
     return img
+
+
+def blend(x1: chex.Array, x2: chex.Array, factor: float) -> chex.Array:
+    """compute factor * x1 + (1 - factor) * x2"""
+    return x2 + factor * (x1 - x2)

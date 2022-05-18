@@ -1,7 +1,10 @@
+from __future__ import annotations
 import jax.numpy as jnp
 import chex
 
-from .utils import flatten, unflatten
+from .core import flatten, unflatten
+
+__all__ = ["normalize", "de_normalize"]
 
 
 def normalize(img: chex.Array, mean: chex.Array | float, std: chex.Array | float) -> chex.Array:

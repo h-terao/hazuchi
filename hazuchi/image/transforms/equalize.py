@@ -2,69 +2,7 @@ import jax
 import jax.numpy as jnp
 import chex
 
-from .core import blend, rgb2gray
-from ..utils import flatten, unflatten
-
-
-__all__ = [
-    "adjust_saturation",
-    "adjust_contrast",
-    "adjust_brightness",
-    "posterize",
-    "autocontrast",
-    "invert",
-    "solarize",
-    "solarize_add",
-    "equalize",
-]
-
-
-def adjust_saturation(img: chex.Array, factor: float) -> chex.Array:
-    gray = rgb2gray(img)
-    return blend(img, gray, factor)
-
-
-def adjust_contrast(img: chex.Array, factor: float) -> chex.Array:
-    degenerate = rgb2gray(img, as_rgb=False)
-    degenerate = jnp.mean(degenerate, axis=(-1, -2, -3), keepdims=True)
-    return blend(img, degenerate, factor)
-
-
-def adjust_brightness(img: chex.Array, factor: float) -> chex.Array:
-    degenerate = jnp.zeros_like(img)
-    return blend(img, degenerate, factor)
-
-
-def posterize(img: chex.Array, bits: int) -> chex.Array:
-    assert 0 <= bits <= 8
-    n = 8 - bits
-
-    degenerate = (img * 255).astype(jnp.uint8)
-    degenerate = jnp.left_shift(jnp.right_shift(degenerate, n), n)
-    degenerate = degenerate.astype(img.dtype) / 255.0
-
-    # Straight Through Estimator
-    degenerate = img + jax.lax.stop_gradient(degenerate - img)
-    return degenerate
-
-
-def autocontrast(img: chex.Array) -> chex.Array:
-    low = jnp.min(img, axis=(-2, -3), keepdims=True)
-    high = jnp.max(img, axis=(-2, -3), keepdims=True)
-    degenerate = (img - low) / (high - low)
-    return jnp.where(high > low, img, degenerate).clip(0, 1)
-
-
-def invert(img: chex.Array) -> chex.Array:
-    return 1.0 - img
-
-
-def solarize(img: chex.Array, threshold: float = 0.5) -> chex.Array:
-    return jnp.where(img < threshold, img, 1.0 - img)
-
-
-def solarize_add(img: chex.Array, threshold: float = 0.5, addition: float = 0) -> chex.Array:
-    return jnp.where(img < threshold, img + addition, img).clip(0, 1)
+from .core import flatten, unflatten
 
 
 def equalize(img: chex.Array) -> chex.Array:

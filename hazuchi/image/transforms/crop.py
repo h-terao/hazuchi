@@ -5,8 +5,8 @@ import jax
 import jax.numpy as jnp
 import chex
 
-from .utils import flatten, unflatten
-from .flip import vflip, hflip
+from .core import flatten, unflatten
+from .flip import hflip, vflip
 
 __all__ = [
     "random_crop",
@@ -48,8 +48,8 @@ def random_crop(
 
     batch_size, height, width, channel = img.shape
     x_ratio, y_ratio = jax.random.uniform(rng, (2,))
-    y_offset = jnp.int32(y_ratio * (height - size[0] + 1))
-    x_offset = jnp.int32(x_ratio * (width - size[1] + 1))
+    y_offset = (y_ratio * (height - size[0] + 1)).astype(int)
+    x_offset = (x_ratio * (width - size[1] + 1)).astype(int)
 
     slice_size = (batch_size, size[0], size[1], channel)
     img = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), slice_size)
@@ -85,8 +85,8 @@ def center_crop(
     )
 
     batch_size, height, width, channel = img.shape
-    y_offset = jnp.int32((height - size[0] + 1) / 2)
-    x_offset = jnp.int32((width - size[1] + 1) / 2)
+    y_offset = ((height - size[0] + 1) / 2).astype(int)
+    x_offset = ((width - size[1] + 1) / 2).astype(int)
 
     slice_size = (batch_size, size[0], size[1], channel)
     img = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), slice_size)
@@ -135,15 +135,21 @@ def three_crop(
 
         # left
         x_offset = 0
-        left = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, height, height, channel))
+        left = jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, height, height, channel)
+        )
 
         # center
         x_offset = jnp.int32((width - height + 1) / 2)
-        center = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, height, height, channel))
+        center = jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, height, height, channel)
+        )
 
         # right
         x_offset = width - height
-        right = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, height, height, channel))
+        right = jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, height, height, channel)
+        )
 
         return left, center, right
 
@@ -152,19 +158,27 @@ def three_crop(
         x_offset = 0  # fixed.
 
         y_offset = 0
-        top = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, width, width, channel))
+        top = jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, width, width, channel)
+        )
 
         y_offset = jnp.int32((height - width + 1) / 2)
-        center = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, width, width, channel))
+        center = jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, width, width, channel)
+        )
 
         y_offset = height - width
-        bottom = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, width, width, channel))
+        bottom = jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, width, width, channel)
+        )
 
         return top, center, bottom
 
     patches = jax.lax.cond(width < height, vertical_three_crop, horizontal_three_crop, img)
     patches = jax.tree_util.tree_map(
-        lambda x: unflatten(jax.image.resize(x, (size[0], size[1], channel), method=interpolation), original_shape),
+        lambda x: unflatten(
+            jax.image.resize(x, (size[0], size[1], channel), method=interpolation), original_shape
+        ),
         patches,
     )
 
@@ -205,7 +219,9 @@ def five_crop(
     y_offset = 0
     x_offset = 0
     upper_left = unflatten(
-        jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)),
+        jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)
+        ),
         original_shape,
     )
 
@@ -213,7 +229,9 @@ def five_crop(
     y_offset = height - size[0]
     x_offset = 0
     lower_left = unflatten(
-        jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)),
+        jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)
+        ),
         original_shape,
     )
 
@@ -221,7 +239,9 @@ def five_crop(
     y_offset = jnp.int32((height - size[0] + 1) / 2)
     x_offset = jnp.int32((width - size[1] + 1) / 2)
     center = unflatten(
-        jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)),
+        jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)
+        ),
         original_shape,
     )
 
@@ -229,7 +249,9 @@ def five_crop(
     y_offset = 0
     x_offset = width - size[1]
     upper_right = unflatten(
-        jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)),
+        jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)
+        ),
         original_shape,
     )
 
@@ -237,7 +259,9 @@ def five_crop(
     y_offset = height - size[0]
     x_offset = width - size[1]
     lower_right = unflatten(
-        jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)),
+        jax.lax.dynamic_slice(
+            img, (0, y_offset, x_offset, 0), (batch_size, size[0], size[1], channel)
+        ),
         original_shape,
     )
 

@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax.scipy import ndimage as ndi
 import chex
 
-from ..utils import flatten, unflatten
+from .array_utils import flatten, unflatten
 
 
 def warp_perspective(

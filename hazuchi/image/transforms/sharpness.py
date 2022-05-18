@@ -1,7 +1,6 @@
 import jax.numpy as jnp
 import chex
 
-# from .core import blend, apply_kernel
 from .core import blend, convolve
 
 

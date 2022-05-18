@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import chex
 
 
-def quantize(img: chex.Array) -> chex.Array:
+def quantize_color(img: chex.Array) -> chex.Array:
     """Quantize pixel velues as integers.
 
     Compute int(x * 255) / 255, and apply STE to be differentiable.

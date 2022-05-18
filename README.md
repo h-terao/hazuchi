@@ -30,12 +30,13 @@ pip install git+https://github.com/h-terao/hazuchi
 ```
 
 ## Modules
+Hazuchi consist of the following modules.
 
-### hazuchi
 - Trainer: A trainer class.
-- Observation: An observation to summarize metrics.
-- callbacks: Callbacks to extend the trainer.
-- functional: Functions.
-- torch_utils: PyTorch utilities to use data loaders.
+- Observation: A class for metrics summarization.
+- callbacks: Classes to extend the trainer.
+- functional: Popular functions.
+- torch_utils: PyTorch utilities to use data.DataLoader with JAX.
+- utils: Utilities.
 - image
-    - transforms: <br> Image augmentation. The input images are expected as arrays that have a range of [0, 255]
+    - transforms: Functions to transform images. The pixel value should be is [0, 1].

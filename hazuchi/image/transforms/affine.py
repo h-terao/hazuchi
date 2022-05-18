@@ -3,11 +3,10 @@ import jax
 import jax.numpy as jnp
 import chex
 
-from .warp_perspective import warp_perspective
-from ..utils import flatten, unflatten
+from .core import warp_perspective, flatten, unflatten
 
 
-__all__ = ["affine", "rotate", "shear", "translate"]
+__all__ = ["affine", "rotate", "rot90", "shear", "translate"]
 
 
 @jax.jit
