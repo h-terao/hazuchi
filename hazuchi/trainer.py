@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Any, Mapping, Sequence
+from typing import Callable, Any, Mapping, Sequence, Tuple
 import warnings
 
 import jax
@@ -13,7 +13,7 @@ from .callbacks.callback import Callback
 TrainState = chex.PyTreeDef
 Batch = Any
 Logger = Callback
-TrainFun = Callable[[TrainState, Batch], tuple[TrainState, Observation]]
+TrainFun = Callable[[TrainState, Batch], Tuple[TrainState, Observation]]
 EvalFun = Callable[[TrainState, Batch], Observation]
 
 
