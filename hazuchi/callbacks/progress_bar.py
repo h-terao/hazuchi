@@ -1,60 +1,35 @@
 from __future__ import annotations
-
-from rich.progress import (
-    BarColumn,
-    Progress,
-    TextColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-    SpinnerColumn,
-)
-
+from tqdm.rich import tqdm
 from . import callback
 
 
 class ProgressBar(callback.Callback):
     """TODO: Estimate epoch length."""
 
-    def __init__(self, on_step: bool = False, on_epoch: bool = True):
-        self.on_step = on_step
-        self.on_epoch = on_epoch
-
+    def __init__(self):
+        self._pbar = None
         self._step_task = None
         self._epoch_task = None
 
-    def on_fit_start(self, trainer, train_state):
-        prog = Progress(
-            TextColumn("{task.description}: {task.percentage:.1f}%"),
-            SpinnerColumn(),
-            BarColumn(),
-            TextColumn(" {task.completed:d}/{task.total:d} "),
-            TimeElapsedColumn(),
-            TextColumn("<"),
-            TimeRemainingColumn(),
-        )
-
-        prog.start()
-
-        self._prog = prog
-
-        if self.on_step:
-            v = trainer.global_step % trainer.train_steps_per_epoch
-            self._step_task = prog.add_task("", total=trainer.train_steps_per_epoch, completed=v)
-
-        if self.on_epoch:
-            self._epoch_task = prog.add_task("Training", total=trainer.max_epochs, completed=trainer.current_epoch)
-
+    def on_fit_epoch_start(self, trainer, train_state):
+        self._pbar = tqdm(total=self.estimate_total_steps(trainer), leave=False)
         return train_state
 
     def on_train_step_end(self, trainer, train_state, summary):
-        if self._step_task is not None:
-            self._prog.update(self._step_task, advance=1)
+        self._pbar.update()
+        return train_state, summary
+
+    def on_val_step_end(self, trainer, train_state, summary):
+        self._pbar.update()
         return train_state, summary
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
-        if self._step_task is not None:
-            self._prog.update(self._step_task, completed=0)
-
-        if self._epoch_task is not None:
-            self._prog.update(self._epoch_task, advance=1)
+        self._pbar.close()
+        self._pbar = None
         return train_state, summary
+
+    def estimate_total_steps(self, trainer):
+        if trainer.current_epoch + 1 % trainer.val_interval == 0:
+            return trainer.train_steps_per_epoch + trainer.val_steps_per_epoch
+        else:
+            return trainer.train_steps_per_epoch
