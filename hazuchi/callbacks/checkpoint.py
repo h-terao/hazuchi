@@ -84,7 +84,7 @@ class Checkpoint(callback.Callback):
 
     @property
     def checkpoint_exists(self) -> bool:
-        return Path(self.save_dir, self.filename).exists
+        return Path(self.save_dir, self.filename).exists()
 
     @property
     def ckpt_path(self):
