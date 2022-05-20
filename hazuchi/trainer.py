@@ -122,6 +122,7 @@ class Trainer:
         if val_steps_per_epoch == -1 and val_data is not None:
             val_steps_per_epoch = len(val_data)
         assert val_steps_per_epoch >= 0, "val_steps_per_epoch should be positive integer or -1."
+        self.val_steps_per_epoch = val_steps_per_epoch
 
         train_state = jax_utils.replicate(train_state)
 
