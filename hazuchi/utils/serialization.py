@@ -23,8 +23,7 @@ def load_checkpoint(
 ) -> tuple[Trainer, TrainState]:
     with open(file, "rb") as fp:
         checkpoint = pickle.load(fp)
-
     if not only_train_state:
         trainer.from_state_dict(checkpoint["trainer"])
-    train_state = from_state_dict(trainer, checkpoint["train_state"])
+    train_state = from_state_dict(train_state, checkpoint["train_state"])
     return trainer, train_state
