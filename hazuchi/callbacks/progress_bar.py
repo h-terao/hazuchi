@@ -12,7 +12,11 @@ class ProgressBar(callback.Callback):
         self._epoch_task = None
 
     def on_fit_epoch_start(self, trainer, train_state):
-        self._pbar = tqdm(total=self.estimate_total_steps(trainer), leave=False)
+        self._pbar = tqdm(
+            total=self.estimate_total_steps(trainer),
+            leave=False,
+            desc=f"[Epoch: {trainer.current_epoch}]",
+        )
         return train_state
 
     def on_train_step_end(self, trainer, train_state, summary):
