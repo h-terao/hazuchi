@@ -1,16 +1,20 @@
+"""Refactor of checkpoint."""
 from __future__ import annotations
 import math
 import operator
 from pathlib import Path
+import pickle
+import gzip
+import uuid
 
 from flax.training.train_state import TrainState
-from flax import jax_utils
+from flax import jax_utils, serialization
+
 from . import callback
 from ..trainer import Trainer
-from ..utils.serialization import load_checkpoint, save_checkpoint
 
 
-class Checkpoint(callback.Callback):
+class Snapshot(callback.Callback):
     """
     Args:
         filename
@@ -29,11 +33,13 @@ class Checkpoint(callback.Callback):
         filename,
         monitor: str | None = None,
         mode: str = "min",
+        compresslevel: int = 9,
     ) -> None:
         self.save_dir = save_dir
         self.filename = filename
         self.monitor = monitor
         self.mode = mode
+        self.compresslevel = compresslevel
 
         self.compare = operator.lt if mode == "min" else operator.gt
         self.best_score = math.inf if mode == "min" else -math.inf
@@ -49,10 +55,17 @@ class Checkpoint(callback.Callback):
         return train_state, summary
 
     def save(self, trainer: Trainer, train_state: TrainState) -> None:
-        """Alias of utils.serialization.save_checkpoint."""
-        ckpt_path = Path(self.save_dir, self.filename)
-        ckpt_path.parent.mkdir(parents=True, exist_ok=True)
-        save_checkpoint(ckpt_path, trainer, train_state)
+        tmp_path = Path(self.save_dir, str(uuid.uuid4())[:8])
+
+        state = {
+            "trainer": trainer.to_state_dict(),
+            "train_state": serialization.to_state_dict(train_state),
+        }
+
+        content = pickle.dumps(state)
+        with gzip.open(tmp_path, "wb", compresslevel=self.compresslevel) as f:
+            f.write(content)
+        tmp_path.rename(self.snapshot_path)
 
     def load(
         self,
@@ -61,13 +74,18 @@ class Checkpoint(callback.Callback):
         only_train_state: bool = False,
         strict: bool = False,
     ) -> tuple[Trainer, TrainState]:
-        ckpt_path = Path(self.save_dir, self.filename)
-        if ckpt_path.exists():
-            return load_checkpoint(ckpt_path, trainer, train_state, only_train_state)
+        if self.exists():
+            with gzip.open(self.snapshot_path, "rb") as f:
+                content = f.read()
+            snapshot = pickle.loads(content)
+            if not only_train_state:
+                trainer = trainer.from_state_dict(snapshot["trainer"])
+            train_state = serialization.from_state_dict(train_state, snapshot["train_state"])
+            return trainer, train_state
         elif not strict:
             return trainer, train_state
         else:
-            raise FileNotFoundError(f"{ckpt_path} is not found.")
+            raise FileNotFoundError(f"{self.snapshot_path} is not found.")
 
     def to_state_dict(self):
         return {"best": self.best_score}
@@ -83,13 +101,12 @@ class Checkpoint(callback.Callback):
             return self._priority
 
     @property
-    def is_latest_checkpoint(self) -> bool:
+    def save_last(self) -> bool:
         return self.monitor is None
 
-    @property
-    def checkpoint_exists(self) -> bool:
-        return Path(self.save_dir, self.filename).exists()
+    def exists(self) -> bool:
+        return self.snapshot_path.exists()
 
     @property
-    def ckpt_path(self):
+    def snapshot_path(self) -> Path:
         return Path(self.save_dir, self.filename)
