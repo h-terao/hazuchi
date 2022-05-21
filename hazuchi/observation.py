@@ -16,7 +16,9 @@ class Observation:
     values: dict[str, tuple[chex.Array, chex.Array]] = struct.field(True, default_factory=dict)
 
     @classmethod
-    def create(cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0) -> Observation:
+    def create(
+        cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0
+    ) -> Observation:
         """Create a new observation.
         Args:
             metrics (dict of str: array): Metrics to summarize.
@@ -45,7 +47,9 @@ class Observation:
             **kwargs: Values to overwrite a summary.
                       Useful to add current steps, epochs, and elapsed time into the summary.
         """
-        summary = {key: jnp.sum(val) / jnp.sum(weight) for key, (val, weight) in self.values.items()}
+        summary = {
+            key: jnp.sum(val) / jnp.sum(weight) for key, (val, weight) in self.values.items()
+        }
         return dict(summary, **kwargs)
 
     def scalar_summary(self, *, prefix: str | None = None, **kwargs) -> dict[str, float]:
@@ -76,7 +80,11 @@ class Observation:
         return self | other
 
     def __mul__(self, other: float) -> Observation:
-        return Observation({key: (val * other, weight * other) for key, (val, weight) in self.values.items()})
+        return Observation(
+            {key: (val * other, weight * other) for key, (val, weight) in self.values.items()}
+        )
 
     def __truediv__(self, other: float) -> Observation:
-        return Observation({key: (val / other, weight / other) for key, (val, weight) in self.values.items()})
+        return Observation(
+            {key: (val / other, weight / other) for key, (val, weight) in self.values.items()}
+        )
