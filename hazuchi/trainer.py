@@ -59,7 +59,7 @@ def split_batch(batch: Batch, chunk_size: int = None) -> tuple[Batch | None, Bat
     if remain_size > 0:
         # If batch_size >> chunk_size, remain_batch will be very small.
         remain_batch = jax.tree_map(
-            lambda x: jnp.stack([x[main_size:] for _ in chunk_size], axis=0),
+            lambda x: jnp.stack([x[main_size:] for _ in range(chunk_size)], axis=0),
             batch,
         )
     else:

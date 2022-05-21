@@ -8,6 +8,8 @@ def kl_div(logits: chex.Array, targets: chex.Array, log_targets: bool = False) -
 
     Args:
         logits: Logit array.
+        targets: Target array.
+        log_targets (bool): If True, targets is considered as the log prob.
     """
     log_preds = jax.nn.log_softmax(logits)
     targets, log_targets = jax.lax.cond(
@@ -20,7 +22,10 @@ def kl_div(logits: chex.Array, targets: chex.Array, log_targets: bool = False) -
 def js_div(logits: chex.Array, targets: chex.Array, log_targets: bool = False) -> chex.Array:
     """The Jensen-Shannon divergence.
 
-    Unlike kl_div, js_div(p, q) == js_div(q, p).
+    Args:
+        logits: Logit array.
+        targets: Target array.
+        log_targets (bool): If True, targets is considered as the log prob.
     """
     assert logits.shape == targets.shape
 
