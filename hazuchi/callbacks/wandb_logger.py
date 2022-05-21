@@ -1,5 +1,4 @@
 from __future__ import annotations
-from pathlib import Path
 import atexit
 
 from . import callback
@@ -34,7 +33,7 @@ class WandbLogger(callback.Callback):
     def init_wandb(self):
         if wandb.run is None:
             kwargs = self.kwargs.copy()
-            id = kwargs.pop("id", self._id)  # kwargs > previous > random
+            id = kwargs.pop("id", self.id)  # kwargs > previous > random
             if id is None:
                 id = wandb.util.generate_id()
             wandb.init(id=id, resume="allow", **kwargs)
@@ -64,17 +63,17 @@ class WandbLogger(callback.Callback):
 
     def log_hyperparams(self, params):
         if wandb.run is None:
-            config = self._kwargs.pop("config", None)
+            config = self.kwargs.pop("config", None)
             if config is None:
                 new_config = params
             else:
                 new_config = dict(config, **params)
-            self._kwargs["config"] = new_config
+            self.kwargs["config"] = new_config
         else:
             wandb.config.update(params, allow_val_change=True)
 
     def to_state_dict(self):
-        return {"_id": self._id}
+        return {"id": self.id}
 
     def from_state_dict(self, state) -> None:
-        self._id = state["_id"]
+        self.id = state["id"]
