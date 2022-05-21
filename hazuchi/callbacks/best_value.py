@@ -1,6 +1,5 @@
 from __future__ import annotations
 import math
-import operator
 
 from . import callback
 
@@ -27,3 +26,9 @@ class BestValue(callback.Callback):
         self.best_score = self.compare(summary.get(self.monitor, self.best_score), self.best_score)
         summary[self.name] = self.best_score
         return train_state, summary
+
+    def to_state_dict(self):
+        return {"best": self.best_score}
+
+    def from_state_dict(self, state) -> None:
+        self.best_score = state["best"]
