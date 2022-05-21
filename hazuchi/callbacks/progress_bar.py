@@ -1,5 +1,13 @@
 from __future__ import annotations
 from tqdm.rich import tqdm
+from rich.progress import (
+    BarColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+    SpinnerColumn,
+)
+
 from . import callback
 
 
@@ -9,10 +17,16 @@ class ProgressBar(callback.Callback):
 
     def on_fit_epoch_start(self, trainer, train_state):
         self._pbar = tqdm(
+            TextColumn("{task.description}: {task.percentage:.1f}%"),
+            SpinnerColumn(),
+            BarColumn(),
+            TextColumn(" {task.completed:d}/{task.total:d} "),
+            TimeElapsedColumn(),
+            TextColumn("<"),
+            TimeRemainingColumn(),
             total=self.estimate_total_steps(trainer),
             leave=False,
             desc=f"[Epoch: {trainer.current_epoch}]",
-            bar_format="{desc:<5.5}{percentage:3.0f}%|{bar:10}{r_bar}",
         )
         return train_state
 
