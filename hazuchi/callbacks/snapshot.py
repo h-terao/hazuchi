@@ -55,6 +55,8 @@ class Snapshot(callback.Callback):
         return train_state, summary
 
     def save(self, trainer: Trainer, train_state: TrainState) -> None:
+        Path(self.save_dir).mkdir(parents=True, exist_ok=True)
+
         tmp_path = Path(self.save_dir, str(uuid.uuid4())[:8])
 
         state = {
