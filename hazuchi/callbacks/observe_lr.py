@@ -18,5 +18,5 @@ class ObserveLR(callback.Callback):
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
         lr = self.learning_rate_fun(trainer.global_step)
-        summary["lr"] = lr
+        summary["lr"] = float(lr)  # to CPU
         return train_state, summary
