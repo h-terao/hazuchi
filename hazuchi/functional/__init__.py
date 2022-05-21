@@ -17,6 +17,5 @@ from .accuracy import *
 from .vat_noise import *
 
 # Array
-from .permute import *
+from .permutate import *
 from .one_hot import *
-from .shift import *

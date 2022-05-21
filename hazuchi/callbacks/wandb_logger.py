@@ -1,6 +1,6 @@
 from __future__ import annotations
+from pathlib import Path
 import atexit
-
 
 from . import callback
 
@@ -12,27 +12,41 @@ except ImportError:
 
 
 class WandbLogger(callback.Callback):
-    def __init__(self, **kwargs):
+    """
+    Args:
+        project (str): Title of the project.
+        name (str, optional): Experiment name.
+        code_dir (str, optional): If specified, upload codes to wandb.
+    """
+
+    def __init__(
+        self, project: str, name: str | None = None, code_dir: str | None = None, **kwargs
+    ):
         if not WANDB_AVAILABLE:
             raise ImportError(
                 "Fail to import wandb. To use wandb_logger, install wandb before running your script."  # noqa
             )
 
-        self._kwargs = kwargs
-        self._id = None
+        self.kwargs = dict(kwargs, project=project, name=name)
+        self.code_dir = code_dir
+        self.id = None
 
     def init_wandb(self):
         if wandb.run is None:
-            kwargs = self._kwargs.copy()
+            kwargs = self.kwargs.copy()
             id = kwargs.pop("id", self._id)  # kwargs > previous > random
             if id is None:
                 id = wandb.util.generate_id()
             wandb.init(id=id, resume="allow", **kwargs)
 
+            if self.code_dir:
+                # upload python codes.
+                wandb.run.log_code(root=self.code_dir)
+
             atexit.register(wandb.finish)
         else:
             id = wandb.run.id
-        self._id = id
+        self.id = id
 
     def on_fit_start(self, trainer, train_state):
         self.init_wandb()

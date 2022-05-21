@@ -11,8 +11,11 @@ def cross_entropy(
 ) -> chex.Array:
     """The cross-entropy loss."""
     assert logits.ndim in [labels.ndim, labels.ndim + 1]
+
     num_classes = logits.shape[-1]
     if logits.ndim == labels.ndim + 1:
         labels = one_hot(labels, num_classes, label_smoothing, dtype=logits.dtype)
+
+    assert logits.shape == labels.shape
     log_preds = jax.nn.log_softmax(logits)
     return -jnp.sum(labels * log_preds, axis=-1)
