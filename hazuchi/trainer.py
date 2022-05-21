@@ -188,7 +188,7 @@ class Trainer:
         )
 
         for callback in self.callbacks():
-            train_state = callback.on_test_end(self, train_state, summary)
+            train_state = callback.on_test_end(self, train_state)
 
         train_state = jax_utils.unreplicate(train_state)
         return train_state, summary

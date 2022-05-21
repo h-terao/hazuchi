@@ -84,8 +84,8 @@ class Callback:
     def on_test_epoch_end(self, trainer, train_state, summary):
         return train_state, summary
 
-    def on_test_end(self, trainer, train_state, summary):
-        return train_state, summary
+    def on_test_end(self, trainer, train_state):
+        return train_state
 
     def to_state_dict(self):
         return {}
