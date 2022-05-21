@@ -20,7 +20,7 @@ class BestValue(callback.Callback):
         assert mode in ["min", "max"]
         self.name = name
         self.monitor = monitor
-        self.compare = operator.lt if mode == "min" else operator.gt
+        self.compare = min if mode == "min" else max
         self.best_score = math.inf if mode == "min" else -math.inf
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
