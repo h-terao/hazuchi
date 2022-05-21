@@ -12,8 +12,7 @@ class ProgressBar(callback.Callback):
         self._pbar = tqdm(
             total=self.estimate_total_steps(trainer),
             leave=False,
-            desc=f"[Epoch: {trainer.current_epoch}]",
-            bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}",
+            desc=f"[Epoch: {trainer.current_epoch + 1}]",
         )
         return train_state
 
@@ -29,6 +28,14 @@ class ProgressBar(callback.Callback):
         self._pbar.close()
         self._pbar = None
         return train_state, summary
+
+    def on_test_start(self, trainer, train_state):
+        self._pbar = tqdm(
+            total=trainer.test_steps_per_epoch,
+            leave=False,
+            desc="[Testing]",
+        )
+        return train_state
 
     def estimate_total_steps(self, trainer):
         if trainer.current_epoch + 1 % trainer.val_interval == 0:
