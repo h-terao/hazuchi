@@ -1,5 +1,5 @@
 from __future__ import annotations
-from tqdm.rich import tqdm
+from tqdm import tqdm
 
 from . import callback
 
