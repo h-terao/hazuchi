@@ -4,29 +4,13 @@ hazuchi.utils package
 Submodules
 ----------
 
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: hazuchi.utils.bind_rng_to_host_device
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.utils.count_num_params
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.utils.serialization
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.utils.train_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   hazuchi.utils.bind_rng_to_host_device
+   hazuchi.utils.count_num_params
+   hazuchi.utils.serialization
+   hazuchi.utils.train_utils
 
 Module contents
 ---------------

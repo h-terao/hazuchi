@@ -16,17 +16,11 @@ Subpackages
 Submodules
 ----------
 
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: hazuchi.observation
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.trainer
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   hazuchi.observation
+   hazuchi.trainer
 
 Module contents
 ---------------

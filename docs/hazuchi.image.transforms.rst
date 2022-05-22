@@ -12,101 +12,25 @@ Subpackages
 Submodules
 ----------
 
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: hazuchi.image.transforms.affine
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.autocontrast
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.blur
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.color
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.colorspace
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.crop
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.cutout
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.equalize
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.flip
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.invert
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.mixup
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.normalize
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.posterize
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.quantize_color
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.sharpness
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.solarize
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   hazuchi.image.transforms.affine
+   hazuchi.image.transforms.autocontrast
+   hazuchi.image.transforms.blur
+   hazuchi.image.transforms.color
+   hazuchi.image.transforms.colorspace
+   hazuchi.image.transforms.crop
+   hazuchi.image.transforms.cutout
+   hazuchi.image.transforms.equalize
+   hazuchi.image.transforms.flip
+   hazuchi.image.transforms.invert
+   hazuchi.image.transforms.mixup
+   hazuchi.image.transforms.normalize
+   hazuchi.image.transforms.posterize
+   hazuchi.image.transforms.quantize_color
+   hazuchi.image.transforms.sharpness
+   hazuchi.image.transforms.solarize
 
 Module contents
 ---------------

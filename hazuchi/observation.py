@@ -22,9 +22,7 @@ class Observation:
     values: dict[str, tuple[chex.Array, chex.Array]] = struct.field(True, default_factory=dict)
 
     @classmethod
-    def create(
-        cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0
-    ) -> Observation:
+    def create(cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0) -> Observation:
         """Create a new observation.
 
         Args:
@@ -50,18 +48,24 @@ class Observation:
         return self | Observation.create(metrics, weight)
 
     def summary(self, **kwargs) -> dict[str, chex.Array]:
-        """Summarize metrics.
+        """Returns a summary.
+
         Args:
-            **kwargs: Values to overwrite a summary.
-                      Useful to add current steps, epochs, and elapsed time into the summary.
+            kwargs: Values to overwrite the accumulated metrics.
+
+        Returns:
+            A dictionary of str: array.
         """
-        summary = {
-            key: jnp.sum(val) / jnp.sum(weight) for key, (val, weight) in self.values.items()
-        }
+        summary = {key: jnp.sum(val) / jnp.sum(weight) for key, (val, weight) in self.values.items()}
         return dict(summary, **kwargs)
 
     def scalar_summary(self, *, prefix: str | None = None, **kwargs) -> dict[str, float]:
-        """Returns a summary."""
+        """Returns a summary. Unlike summary, it holds float value.
+
+        Args:
+            prefix (str, optional): A prefix to add into the keys of summary.
+            kwargs: Values to overwrite the accumulated metrics.
+        """
         if prefix is None:
             prefix = ""
         summary = {f"{prefix}{key}": float(val) for key, val in self.summary().items()}
@@ -88,11 +92,7 @@ class Observation:
         return self | other
 
     def __mul__(self, other: float) -> Observation:
-        return Observation(
-            {key: (val * other, weight * other) for key, (val, weight) in self.values.items()}
-        )
+        return Observation({key: (val * other, weight * other) for key, (val, weight) in self.values.items()})
 
     def __truediv__(self, other: float) -> Observation:
-        return Observation(
-            {key: (val / other, weight / other) for key, (val, weight) in self.values.items()}
-        )
+        return Observation({key: (val / other, weight / other) for key, (val, weight) in self.values.items()})

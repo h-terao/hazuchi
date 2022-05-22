@@ -4,11 +4,10 @@ hazuchi.torch\_utils package
 Submodules
 ----------
 
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: hazuchi.torch_utils.torch_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   hazuchi.torch_utils.torch_utils
 
 Module contents
 ---------------

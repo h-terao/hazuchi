@@ -4,23 +4,12 @@ hazuchi.image.transforms.core package
 Submodules
 ----------
 
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: hazuchi.image.transforms.core.array_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.core.convolve
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: hazuchi.image.transforms.core.warp_perspective
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   hazuchi.image.transforms.core.array_utils
+   hazuchi.image.transforms.core.convolve
+   hazuchi.image.transforms.core.warp_perspective
 
 Module contents
 ---------------
