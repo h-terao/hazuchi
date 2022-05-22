@@ -3,15 +3,13 @@ from __future__ import annotations
 import math
 import operator
 from pathlib import Path
-import pickle
-import gzip
-import uuid
 
 from flax.training.train_state import TrainState
-from flax import jax_utils, serialization
+from flax import jax_utils
 
 from . import callback
 from ..trainer import Trainer
+from ..utils import serialization
 
 
 class Snapshot(callback.Callback):
@@ -57,17 +55,11 @@ class Snapshot(callback.Callback):
     def save(self, trainer: Trainer, train_state: TrainState) -> None:
         Path(self.save_dir).mkdir(parents=True, exist_ok=True)
 
-        tmp_path = Path(self.save_dir, str(uuid.uuid4())[:8])
-
         state = {
-            "trainer": trainer.to_state_dict(),
+            "trainer": serialization.to_state_dict(trainer),
             "train_state": serialization.to_state_dict(train_state),
         }
-
-        content = pickle.dumps(state)
-        with gzip.open(tmp_path, "wb", compresslevel=self.compresslevel) as f:
-            f.write(content)
-        tmp_path.rename(self.snapshot_path)
+        serialization.save_state(self.snapshot_path, state, compresslevel=self.compresslevel)
 
     def load(
         self,
@@ -77,11 +69,9 @@ class Snapshot(callback.Callback):
         strict: bool = False,
     ) -> tuple[Trainer, TrainState]:
         if self.exists():
-            with gzip.open(self.snapshot_path, "rb") as f:
-                content = f.read()
-            snapshot = pickle.loads(content)
+            snapshot = serialization.load_state(self.snapshot_path)
             if not only_train_state:
-                trainer = trainer.from_state_dict(snapshot["trainer"])
+                trainer = serialization.from_state_dict(trainer, snapshot["trainer"])
             train_state = serialization.from_state_dict(train_state, snapshot["train_state"])
             return trainer, train_state
         elif not strict:
