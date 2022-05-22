@@ -6,6 +6,7 @@ from . import callback
 
 
 class EarlyStopping(callback.Callback):
+    """Early stopping."""
 
     priority = callback.PRIORITY_EDITOR
 

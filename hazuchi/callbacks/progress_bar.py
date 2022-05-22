@@ -5,6 +5,8 @@ from . import callback
 
 
 class ProgressBar(callback.Callback):
+    """Show progress bar."""
+
     def __init__(self):
         self._pbar = None
 

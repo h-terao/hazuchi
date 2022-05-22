@@ -1,11 +1,10 @@
 # flake8: noqa
-
-from . import (
-    callbacks,
-    functional,
-    utils,
-    torch_utils,
-    image,
-)
 from .trainer import Trainer
 from .observation import Observation
+from . import (
+    functional,
+    callbacks,
+    image,
+    utils,
+    torch_utils,
+)

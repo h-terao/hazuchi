@@ -14,7 +14,8 @@ from ..utils import serialization
 
 
 class Snapshot(callback.Callback):
-    """
+    """Save the snapshot of training.
+
     Args:
         filename
         monitor (str | None): Name of metrics to monitor.

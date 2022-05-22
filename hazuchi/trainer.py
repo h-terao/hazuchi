@@ -158,9 +158,11 @@ class Trainer:
             for callback in self._callback_iterator():
                 train_state = callback.on_fit_epoch_start(self, train_state)
 
-            train_state, summary = self.train_loop(train_state, train_data, train_steps_per_epoch)
+            train_state, summary = self._train_loop(train_state, train_data, train_steps_per_epoch)
             if val_data and self.current_epoch % self.val_interval == 0:
-                train_state, val_summary = self.val_loop(train_state, val_data, val_steps_per_epoch)
+                train_state, val_summary = self._val_loop(
+                    train_state, val_data, val_steps_per_epoch
+                )
                 summary = dict(summary, **val_summary)
 
             for callback in self._callback_iterator():
@@ -187,9 +189,11 @@ class Trainer:
         Args:
             train_state: Train state that holds parameters.
             train_data: Iterable object that yields batches of train data.
-            val_data: Iterable object that yields batches of val data. If None, the model is not evaluated in fit.
-            train_steps_per_epoch (int): Number of train steps per epoch. If -1, use len(train_data).
-            val_steps_per_epoch (int): Number of val steps per epoch. If -1, use len(val_data).
+            val_data: Iterable object that yields batches of val data.
+                If None, the model is not evaluated in fit.
+            train_steps_per_epoch (int): Number of train steps per epoch.
+                If -1, len(train_data) is used.
+            val_steps_per_epoch (int): Number of val steps per epoch. If -1, len(val_data) is used.
 
         Returns:
             Summary of evaluate results.
@@ -207,7 +211,7 @@ class Trainer:
         for callback in self._callback_iterator():
             train_state = callback.on_test_start(self, train_state)
 
-        train_state, summary = self.test_loop(
+        train_state, summary = self._test_loop(
             train_state=train_state,
             dataset=test_data,
             test_fun=test_fun,
@@ -221,7 +225,7 @@ class Trainer:
         train_state = jax_utils.unreplicate(train_state)
         return train_state, summary
 
-    def train_loop(self, train_state, dataset, train_steps_per_epoch: int):
+    def _train_loop(self, train_state, dataset, train_steps_per_epoch: int):
         prefix = "train/"
         num_devices = jax.local_device_count()
 
@@ -270,7 +274,7 @@ class Trainer:
         self.current_epoch += 1
         return train_state, summary
 
-    def val_loop(self, train_state, dataset, val_steps_per_epoch: int):
+    def _val_loop(self, train_state, dataset, val_steps_per_epoch: int):
         prefix = "val/"
         num_devices = jax.local_device_count()
 
@@ -307,7 +311,7 @@ class Trainer:
 
         return train_state, summary
 
-    def test_loop(
+    def _test_loop(
         self, train_state, dataset, test_fun: EvalFun | None, prefix: str, test_steps_per_epoch: int
     ):
         if test_fun is None:
@@ -349,6 +353,7 @@ class Trainer:
         return train_state, summary
 
     def to_state_dict(self) -> dict[str, Any]:
+        """Returns trainer state."""
         to_save = {
             "global_step": self.global_step,
             "current_epoch": self.current_epoch,
@@ -360,6 +365,7 @@ class Trainer:
         return to_save
 
     def from_state_dict(self, state: dict[str, Any]) -> Trainer:
+        """Restore trainer from the given state."""
         self.global_step = state["global_step"]
         self.current_epoch = state["current_epoch"]
         self.fitted = state["fitted"]
@@ -373,6 +379,14 @@ class Trainer:
         return self
 
     def log_hyperparams(self, config):
+        """Logging hyperparameters to all callbacks that have log_hyperparams method.
+
+        Args:
+            config (dict of Any): Hyperparameters.
+
+        Return:
+            None.
+        """
         for callback in self._callback_iterator():
             if hasattr(callback, "log_hyperparams"):
                 callback.log_hyperparams(config)

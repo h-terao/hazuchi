@@ -5,31 +5,7 @@ PRIORITY_SNAPSHOT = -100
 
 
 class Callback:
-    """
-    NOTE:
-        ```python
-        on_train_start()
-        for epoch in range(max_epochs):
-            on_epoch_start()
-
-            on_train_epoch_start()
-            for batch in train_data:
-                on_train_step_start()
-                update_model
-                on_train_step_end()
-            on_train_epoch_end()
-
-            on_val_epoch_start()
-            for batch in train_data:
-                on_val_step_start()
-                validate model
-                on_val_step_end()
-            on_val_epoch_end()
-
-            on_epoch_end()
-        on_train_end()
-        ```
-    """
+    """Base of callback object."""
 
     priority: int = PRIORITY_READER
 

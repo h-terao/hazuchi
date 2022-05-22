@@ -11,7 +11,8 @@ except ImportError:
 
 
 class WandbLogger(callback.Callback):
-    """
+    """Log metrics to wandb.
+
     Args:
         project (str): Title of the project.
         name (str, optional): Experiment name.
