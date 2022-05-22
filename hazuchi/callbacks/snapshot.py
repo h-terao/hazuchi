@@ -6,6 +6,7 @@ from pathlib import Path
 
 from flax.training.train_state import TrainState
 from flax import jax_utils
+from flax import serialization as flax_serialization
 
 from . import callback
 from ..trainer import Trainer
@@ -56,8 +57,8 @@ class Snapshot(callback.Callback):
         Path(self.save_dir).mkdir(parents=True, exist_ok=True)
 
         state = {
-            "trainer": serialization.to_state_dict(trainer),
-            "train_state": serialization.to_state_dict(train_state),
+            "trainer": flax_serialization.to_state_dict(trainer),
+            "train_state": flax_serialization.to_state_dict(train_state),
         }
         serialization.save_state(self.snapshot_path, state, compresslevel=self.compresslevel)
 
@@ -71,8 +72,8 @@ class Snapshot(callback.Callback):
         if self.exists():
             snapshot = serialization.load_state(self.snapshot_path)
             if not only_train_state:
-                trainer = serialization.from_state_dict(trainer, snapshot["trainer"])
-            train_state = serialization.from_state_dict(train_state, snapshot["train_state"])
+                trainer = flax_serialization.from_state_dict(trainer, snapshot["trainer"])
+            train_state = flax_serialization.from_state_dict(train_state, snapshot["train_state"])
             return trainer, train_state
         elif not strict:
             return trainer, train_state
