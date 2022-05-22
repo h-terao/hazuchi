@@ -75,7 +75,9 @@ def huber_loss(inputs: chex.Array, targets: chex.Array, delta: float) -> chex.Ar
     )
 
 
-def cross_entropy(logits: chex.Array, labels: chex.Array, label_smoothing: float = 0.0) -> chex.Array:
+def cross_entropy(
+    logits: chex.Array, labels: chex.Array, label_smoothing: float = 0.0
+) -> chex.Array:
     """The cross-entropy loss."""
     assert logits.ndim in [labels.ndim, labels.ndim + 1]
 
@@ -97,7 +99,9 @@ def kl_div(logits: chex.Array, targets: chex.Array, log_targets: bool = False) -
         log_targets (bool): If True, targets is considered as the log prob.
     """
     log_preds = jax.nn.log_softmax(logits)
-    targets, log_targets = jax.lax.cond(log_targets, lambda t: (jnp.exp(t), t), lambda t: (t, jnp.log(t)), targets)
+    targets, log_targets = jax.lax.cond(
+        log_targets, lambda t: (jnp.exp(t), t), lambda t: (t, jnp.log(t)), targets
+    )
 
     return jnp.sum(targets * (log_preds - log_targets), axis=-1)
 
@@ -113,7 +117,9 @@ def js_div(logits: chex.Array, targets: chex.Array, log_targets: bool = False) -
     assert logits.shape == targets.shape
 
     preds = jax.nn.softmax(logits)
-    targets, log_targets = jax.lax.cond(log_targets, lambda t: (jnp.exp(t), t), lambda t: (t, jnp.log(t)), targets)
+    targets, log_targets = jax.lax.cond(
+        log_targets, lambda t: (jnp.exp(t), t), lambda t: (t, jnp.log(t)), targets
+    )
     y = (preds + targets) / 2
     return (kl_div(logits, y) + kl_div(log_targets, y)) / 2.0
 
