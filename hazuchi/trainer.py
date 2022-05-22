@@ -4,7 +4,7 @@ import warnings
 
 import jax
 import jax.numpy as jnp
-from flax import jax_utils, traverse_util
+from flax import jax_utils, traverse_util, serialization
 import chex
 
 from .observation import Observation
@@ -348,3 +348,10 @@ class Trainer:
         for callback in self.callbacks():
             if hasattr(callback, "log_hyperparams"):
                 callback.log_hyperparams(config)
+
+
+serialization.register_serialization_state(
+    Trainer,
+    ty_to_state_dict=lambda ty: ty.to_state_dict(),
+    ty_from_state_dict=lambda ty, state: ty.from_state_dict(state),
+)
