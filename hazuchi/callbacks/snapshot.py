@@ -1,4 +1,3 @@
-"""Refactor of checkpoint."""
 from __future__ import annotations
 import math
 import operator
@@ -9,7 +8,6 @@ from flax import jax_utils
 from flax import serialization as flax_serialization
 
 from . import callback
-from ..trainer import Trainer
 from ..utils import serialization
 
 
@@ -54,7 +52,7 @@ class Snapshot(callback.Callback):
                 self.save(trainer, jax_utils.unreplicate(train_state))
         return train_state, summary
 
-    def save(self, trainer: Trainer, train_state: TrainState) -> None:
+    def save(self, trainer, train_state: TrainState) -> None:
         Path(self.save_dir).mkdir(parents=True, exist_ok=True)
 
         state = {
@@ -65,11 +63,11 @@ class Snapshot(callback.Callback):
 
     def load(
         self,
-        trainer: Trainer,
+        trainer,
         train_state: TrainState,
         only_train_state: bool = False,
         strict: bool = False,
-    ) -> tuple[Trainer, TrainState]:
+    ):
         if self.exists():
             snapshot = serialization.load_state(self.snapshot_path)
             if not only_train_state:
