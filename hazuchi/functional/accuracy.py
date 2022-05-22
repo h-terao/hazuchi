@@ -4,12 +4,23 @@ import chex
 
 def accuracy(logits: chex.Array, labels: chex.Array, k: int = 1) -> chex.Array:
     """Top-k accuracy score.
+
     Args:
-        logits: logits. (..., num_class)
-        labels: one-hot labels. (..., num_class)
+        logits: logits.
+        labels: one-hot labels.
+
     Returns:
-        Array that has a shape of (...).
-        Call accuracy().mean() to obtain scalar value.
+        Top-k accuracy.
+
+    Example:
+        >>> logits = jnp.array([[0.1, 0.9], [0.9, 0.1], [1.0, 0.0]])
+        >>> labels = jnp.array([0, 0, 0])
+        >>> accuracy(logits, labels).tolist()
+        [0, 1, 0]
+        >>> accuracy(logits, labels).mean()
+        0.666
+        >>> accuracy(logits, logits).mean()  # Use soft-target.
+        1.0
     """
     assert logits.ndim in (labels.ndim, labels.ndim + 1)
 

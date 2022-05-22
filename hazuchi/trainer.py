@@ -75,7 +75,7 @@ class Trainer:
         eval_fun (Callable): A step function that computes eval metrics from a batch.
         max_epochs (int): Number of epochs. -1 is equal to inf.
         val_interval (int): Interval of epochs to call eval_fun.
-        callbacks (dict of str: Callback, optional): Callbacks to use.
+        callbacks (dict, optional): Callbacks.
     """
 
     def __init__(
@@ -125,11 +125,11 @@ class Trainer:
             train_state: Train state that holds parameters.
             train_data: Iterable object that yields batches of train data.
             val_data: Iterable object that yields batches of val data.
-                      If None, the model is not evaluated in fit.
+                If None, the model is not evaluated in fit.
             train_steps_per_epoch (int): Number of train steps per epoch.
-                                         If -1, use len(train_data).
+                If -1, use len(train_data).
             val_steps_per_epoch (int): Number of val steps per epoch.
-                                       If -1, use len(val_data).
+                If -1, use len(val_data).
 
         Returns:
             Fitted train state.

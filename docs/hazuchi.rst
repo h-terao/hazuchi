@@ -16,16 +16,12 @@ Subpackages
 Submodules
 ----------
 
-hazuchi.observation module
---------------------------
 
 .. automodule:: hazuchi.observation
    :members:
    :undoc-members:
    :show-inheritance:
 
-hazuchi.trainer module
-----------------------
 
 .. automodule:: hazuchi.trainer
    :members:

@@ -10,7 +10,13 @@ class Observation:
     """An immutable class to summarize metrics.
 
     Attributes:
-        values (dict of str: tuple[array, array]): Accumulated metrics to summarize.
+        values (dict): Accumulated metrics to summarize.
+
+    Example:
+        >>> obs = Observation.create({"loss": 4.0}, weight=1)
+        >>> obs += Observation.create({"loss": 1.0, "accuracy": 0.9}, weight=2)
+        >>> print(obs.scalar_summary())
+        {"loss": 2.0, "accuracy": 0.9}
     """
 
     values: dict[str, tuple[chex.Array, chex.Array]] = struct.field(True, default_factory=dict)
@@ -20,12 +26,14 @@ class Observation:
         cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0
     ) -> Observation:
         """Create a new observation.
+
         Args:
-            metrics (dict of str: array): Metrics to summarize.
-            weight (float, optional): Weight of metrics for accumulation.
-                                      Maybe, batch size is usually passed.
+            metrics (dict): Metrics to summarize.
+            weight (float, optional): Weight of metrics to accumulate.
+                In many cases, batch size is given.
+
         Returns:
-            Observation: Returns a new observation initialized by the given metrics.
+            An initialized observation.
         """
         if metrics is None:
             return cls()
