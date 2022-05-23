@@ -20,11 +20,8 @@ def one_hot(
         label_smoothing (float): Label smoothing value.
         dtype: JAX array dtype.
     """
-    off_value = label_smoothing / num_classes
-    on_value = 1.0 - label_smoothing + off_value
     labels = jax.nn.one_hot(labels, num_classes, dtype=dtype)
-    labels = jnp.where(labels > 0.5, on_value, off_value)
-    return labels
+    return (1.0 - label_smoothing) * labels + label_smoothing / num_classes
 
 
 def accuracy(logits: chex.Array, labels: chex.Array, k: int = 1) -> chex.Array:
@@ -75,9 +72,7 @@ def huber_loss(inputs: chex.Array, targets: chex.Array, delta: float) -> chex.Ar
     )
 
 
-def cross_entropy(
-    logits: chex.Array, labels: chex.Array, label_smoothing: float = 0.0
-) -> chex.Array:
+def cross_entropy(logits: chex.Array, labels: chex.Array, label_smoothing: float = 0.0) -> chex.Array:
     """The cross-entropy loss."""
     assert logits.ndim in [labels.ndim, labels.ndim + 1]
 
@@ -86,8 +81,7 @@ def cross_entropy(
         labels = one_hot(labels, num_classes, label_smoothing, dtype=logits.dtype)
 
     assert logits.shape == labels.shape
-    log_preds = jax.nn.log_softmax(logits)
-    return -jnp.sum(labels * log_preds, axis=-1)
+    return -jnp.sum(labels * jax.nn.log_softmax(logits, axis=-1), axis=-1)
 
 
 def kl_div(logits: chex.Array, targets: chex.Array, log_targets: bool = False) -> chex.Array:
@@ -98,11 +92,15 @@ def kl_div(logits: chex.Array, targets: chex.Array, log_targets: bool = False) -
         targets: Target array.
         log_targets (bool): If True, targets is considered as the log prob.
     """
-    log_preds = jax.nn.log_softmax(logits)
-    targets, log_targets = jax.lax.cond(
-        log_targets, lambda t: (jnp.exp(t), t), lambda t: (t, jnp.log(t)), targets
-    )
+    assert logits.shape == targets.shape
 
+    log_preds = jax.nn.log_softmax(logits, axis=-1)
+    targets, log_targets = jax.lax.cond(
+        log_targets,
+        lambda t: (jnp.exp(t), t),
+        lambda t: (t, jnp.log(t)),
+        targets,
+    )
     return jnp.sum(targets * (log_preds - log_targets), axis=-1)
 
 
@@ -117,9 +115,7 @@ def js_div(logits: chex.Array, targets: chex.Array, log_targets: bool = False) -
     assert logits.shape == targets.shape
 
     preds = jax.nn.softmax(logits)
-    targets, log_targets = jax.lax.cond(
-        log_targets, lambda t: (jnp.exp(t), t), lambda t: (t, jnp.log(t)), targets
-    )
+    targets, log_targets = jax.lax.cond(log_targets, lambda t: (jnp.exp(t), t), lambda t: (t, jnp.log(t)), targets)
     y = (preds + targets) / 2
     return (kl_div(logits, y) + kl_div(log_targets, y)) / 2.0
 
@@ -138,9 +134,18 @@ def triplet_loss(
 
 def weight_decay_loss(
     x: chex.PyTreeDef,
-    penalty_fun: Callable[[chex.Array], chex.Array],
+    penalty_fun: Callable[[chex.Array], chex.Array] = jnp.square,
     filter_fun: Callable[[chex.Array], bool] | None = None,
 ) -> chex.Array:
+    """
+
+    Args:
+        x (PyTree): Parameters to apply weight decay.
+        penalty_fun (Callable): A penalty function. Default: jnp.square.
+
+    Note:
+        Maybe, you should use `optax.add_decayed_weights`.
+    """
     if filter_fun is None:
         filter_fun = lambda v: True  # noqa
     return sum([jnp.sum(penalty_fun(xi)) for xi in jax.tree_leaves(x) if filter_fun(xi)])
