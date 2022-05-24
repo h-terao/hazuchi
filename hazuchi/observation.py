@@ -1,43 +1,56 @@
 from __future__ import annotations
+from typing import NamedTuple
 import jax
 import jax.numpy as jnp
-from flax import struct
 import chex
 
 
-@struct.dataclass
-class Observation:
-    """An immutable class to summarize metrics.
+class Observation(NamedTuple):
+    """Summarize metrics."""
 
-    Attributes:
-        values (dict): Accumulated metrics to summarize.
-
-    Example:
-        >>> obs = Observation.create({"loss": 4.0}, weight=1)
-        >>> obs += Observation.create({"loss": 1.0, "accuracy": 0.9}, weight=2)
-        >>> print(obs.scalar_summary())
-        {"loss": 2.0, "accuracy": 0.9}
-    """
-
-    values: dict[str, tuple[chex.Array, chex.Array]] = struct.field(True, default_factory=dict)
+    _accum_metrics: dict[str, chex.Array] | None = None
+    _accum_weights: dict[str, chex.Array] | None = None
 
     @classmethod
-    def create(cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0) -> Observation:
-        """Create a new observation.
-
-        Args:
-            metrics (dict): Metrics to summarize.
-            weight (float, optional): Weight of metrics to accumulate.
-                In many cases, batch size is given.
-
-        Returns:
-            An initialized observation.
-        """
+    def create(
+        cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0
+    ) -> Observation:
         if metrics is None:
-            return cls()
+            metrics = {}
+        accum_metrics = {key: val * weight for key, val in metrics.items()}
+        accum_weights = {key: weight for key in metrics}
+        return cls(accum_metrics, accum_weights)
+
+    @property
+    def accum_metrics(self) -> dict[str, chex.Array]:
+        if self._accum_metrics is None:
+            return {}
         else:
-            values = jax.tree_map(lambda v: (v * weight, weight), metrics)
-            return cls(values)
+            return self._accum_metrics
+
+    @property
+    def accum_weights(self) -> dict[str, chex.Array]:
+        if self._accum_weights is None:
+            return {}
+        else:
+            return self._accum_weights
+
+    def keys(self):
+        return list(self.accum_metrics)
+
+    def summary(self):
+        return jax.tree_map(
+            lambda val, weight: jnp.mean(val) / jnp.mean(weight),
+            self.accum_metrics,
+            self.accum_weights,
+        )
+
+    def scalar_summary(self, *, prefix: str | None = None, **scalars):
+        if prefix is None:
+            prefix = ""
+        summary = {prefix + key: float(val) for key, val in self.summary().items()}
+        summary = dict(summary, **scalars)
+        return summary
 
     def add(self, metrics: dict[str, chex.Array], weight: float = 1.0) -> Observation:
         """Accumulate metrics."""
@@ -47,52 +60,37 @@ class Observation:
         """Overwrite metrics."""
         return self | Observation.create(metrics, weight)
 
-    def summary(self, **kwargs) -> dict[str, chex.Array]:
-        """Returns a summary.
-
-        Args:
-            kwargs: Values to overwrite the accumulated metrics.
-
-        Returns:
-            A dictionary of str: array.
-        """
-        summary = {key: jnp.sum(val) / jnp.sum(weight) for key, (val, weight) in self.values.items()}
-        return dict(summary, **kwargs)
-
-    def scalar_summary(self, *, prefix: str | None = None, **kwargs) -> dict[str, float]:
-        """Returns a summary. Unlike summary, it holds float value.
-
-        Args:
-            prefix (str, optional): A prefix to add into the keys of summary.
-            kwargs: Values to overwrite the accumulated metrics.
-        """
-        if prefix is None:
-            prefix = ""
-        summary = {f"{prefix}{key}": float(val) for key, val in self.summary().items()}
-        return dict(summary, **kwargs)
-
     def __add__(self, other: Observation) -> Observation:
-        updates = {}
-        for key, (val, weight) in other.values.items():
-            accum_val, accum_weight = self.values.get(key, (0, 0))
-            accum_val += val
-            accum_weight += weight
-            updates[key] = (accum_val, accum_weight)
-        values = dict(self.values, **updates)
-        return Observation(values)
+        metric_updates = {}
+        weight_updates = {}
+        for key in other.keys():
+            metric = other.accum_metrics[key]
+            weight = other.accum_weights[key]
+
+            metric_updates[key] = self.accum_metrics.get(key, 0) + metric
+            weight_updates[key] = self.accum_weights.get(key, 0) + weight
+
+        new_metrics = dict(self.accum_metrics, **metric_updates)
+        new_weights = dict(self.accum_weights, **weight_updates)
+        return Observation(new_metrics, new_weights)
 
     def __iadd__(self, other: Observation) -> Observation:
         return self + other
 
     def __or__(self, other: Observation) -> Observation:
-        values = dict(self.values, **other.values)
-        return Observation(values)
+        new_metrics = dict(self.accum_metrics, **other.accum_metrics)
+        new_weights = dict(self.accum_weights, **other.accum_weights)
+        return Observation(new_metrics, new_weights)
 
     def __ior__(self, other: Observation) -> Observation:
         return self | other
 
     def __mul__(self, other: float) -> Observation:
-        return Observation({key: (val * other, weight * other) for key, (val, weight) in self.values.items()})
+        new_metrics = jax.tree_map(lambda x: x * other, self.accum_metrics)
+        new_weights = jax.tree_map(lambda x: x * other, self.accum_weights)
+        return Observation(new_metrics, new_weights)
 
     def __truediv__(self, other: float) -> Observation:
-        return Observation({key: (val / other, weight / other) for key, (val, weight) in self.values.items()})
+        new_metrics = jax.tree_map(lambda x: x / other, self.accum_metrics)
+        new_weights = jax.tree_map(lambda x: x / other, self.accum_weights)
+        return Observation(new_metrics, new_weights)

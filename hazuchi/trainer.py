@@ -1,14 +1,14 @@
 from __future__ import annotations
-from typing import Callable, Any, Mapping, Sequence, Tuple
+from typing import Callable, Any, Tuple
 import warnings
 
 import jax
 import jax.numpy as jnp
-from flax import jax_utils, traverse_util, serialization
 import chex
 
 from .observation import Observation
 from .callbacks.callback import Callback
+from . import utils
 
 TrainState = chex.PyTreeDef
 Batch = Any
@@ -25,17 +25,8 @@ def _cycle(dataset):
 
 @jax.jit
 def _estimate_batch_size(batch: Batch) -> int:
-    """Estimate batch size.
-    This function digs batch by the depth-first search,
-    and returns len(x), where x denotes the firstly found array.
-    """
-    if isinstance(batch, Mapping):
-        for v in traverse_util.flatten_dict(batch).values():
-            return _estimate_batch_size(v)
-    elif isinstance(batch, Sequence):
-        return _estimate_batch_size(batch[0])
-    else:
-        return len(batch)
+    """Estimate batch size"""
+    return len(jax.tree_leaves(batch)[0])
 
 
 def _split_batch(batch: Batch, chunk_size: int = None) -> tuple[Batch | None, Batch | None]:
@@ -48,7 +39,9 @@ def _split_batch(batch: Batch, chunk_size: int = None) -> tuple[Batch | None, Ba
 
     if main_size > 0:
         main_batch = jax.tree_map(
-            lambda x: jnp.reshape(x[:main_size], (chunk_size, batch_size // chunk_size) + x.shape[1:]),
+            lambda x: jnp.reshape(
+                x[:main_size], (chunk_size, batch_size // chunk_size) + x.shape[1:]
+            ),
             batch,
         )
     else:
@@ -104,7 +97,9 @@ class Trainer:
         self.test_steps_per_epoch = None
 
     def _callback_iterator(self, reverse: bool = False):
-        for callback in sorted(self._callbacks.values(), key=lambda v: v.priority, reverse=not reverse):
+        for callback in sorted(
+            self._callbacks.values(), key=lambda v: v.priority, reverse=not reverse
+        ):
             yield callback
 
     def fit(
@@ -140,7 +135,7 @@ class Trainer:
         assert val_steps_per_epoch >= 0, "val_steps_per_epoch should be positive integer or -1."
         self.val_steps_per_epoch = val_steps_per_epoch
 
-        train_state = jax_utils.replicate(train_state)
+        train_state = utils.replicate(train_state)
 
         for callback in self._callback_iterator():
             train_state = callback.on_fit_start(self, train_state)
@@ -156,7 +151,9 @@ class Trainer:
 
             train_state, summary = self._train_loop(train_state, train_data, train_steps_per_epoch)
             if val_data and self.current_epoch % self.val_interval == 0:
-                train_state, val_summary = self._val_loop(train_state, val_data, val_steps_per_epoch)
+                train_state, val_summary = self._val_loop(
+                    train_state, val_data, val_steps_per_epoch
+                )
                 summary = dict(summary, **val_summary)
 
             for callback in self._callback_iterator():
@@ -167,7 +164,7 @@ class Trainer:
 
         self.fitted = True
 
-        train_state = jax_utils.unreplicate(train_state)
+        train_state = utils.unreplicate(train_state)
         return train_state
 
     def test(
@@ -186,7 +183,8 @@ class Trainer:
             test_fun (Callable, optional): A step function to test models.
                 If None, use eval_fun specified in Trainer.__init__.
             prefix (str, optional): A prefix string added when creates summary.
-            test_steps_per_epoch (int): Number of test steps per epoch. If -1, len(test_data) is used.
+            test_steps_per_epoch (int): Number of test steps per epoch.
+                If -1, len(test_data) is used.
 
         Returns:
             Summary of evaluate results.
@@ -199,7 +197,7 @@ class Trainer:
         if prefix is None:
             prefix = "test/"
 
-        train_state = jax_utils.replicate(train_state)
+        train_state = utils.replicate(train_state)
 
         for callback in self._callback_iterator():
             train_state = callback.on_test_start(self, train_state)
@@ -215,7 +213,7 @@ class Trainer:
         for callback in self._callback_iterator():
             train_state = callback.on_test_end(self, train_state)
 
-        train_state = jax_utils.unreplicate(train_state)
+        train_state = utils.unreplicate(train_state)
         return train_state, summary
 
     def _train_loop(self, train_state, dataset, train_steps_per_epoch: int):
@@ -247,7 +245,9 @@ class Trainer:
                 train_state, obs = self.train_fun(train_state, remain_batch)
                 step_observation += obs / num_devices
 
-            summary = step_observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
+            summary = step_observation.scalar_summary(
+                prefix=prefix, step=self.global_step, epoch=self.current_epoch
+            )
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_train_step_end(self, train_state, summary)
 
@@ -256,7 +256,9 @@ class Trainer:
             if batch_idx + 1 == train_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
+        summary = observation.scalar_summary(
+            prefix=prefix, step=self.global_step, epoch=self.current_epoch
+        )
         for callback in self._callback_iterator():
             train_state, summary = callback.on_train_epoch_end(self, train_state, summary)
 
@@ -282,7 +284,9 @@ class Trainer:
             if remain_batch is not None:
                 step_observation += self.eval_fun(train_state, remain_batch) / num_devices
 
-            summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
+            summary = observation.scalar_summary(
+                prefix=prefix, step=self.global_step, epoch=self.current_epoch
+            )
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_val_step_end(self, train_state, summary)
 
@@ -290,13 +294,17 @@ class Trainer:
             if batch_idx + 1 == val_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
+        summary = observation.scalar_summary(
+            prefix=prefix, step=self.global_step, epoch=self.current_epoch
+        )
         for callback in self._callback_iterator():
             train_state, summary = callback.on_val_epoch_end(self, train_state, summary)
 
         return train_state, summary
 
-    def _test_loop(self, train_state, dataset, test_fun: EvalFun | None, prefix: str, test_steps_per_epoch: int):
+    def _test_loop(
+        self, train_state, dataset, test_fun: EvalFun | None, prefix: str, test_steps_per_epoch: int
+    ):
         if test_fun is None:
             test_fun = self.eval_fun
 
@@ -317,7 +325,9 @@ class Trainer:
             if remain_batch is not None:
                 step_observation += test_fun(train_state, remain_batch) / num_devices
 
-            summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
+            summary = observation.scalar_summary(
+                prefix=prefix, step=self.global_step, epoch=self.current_epoch
+            )
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_test_step_end(self, train_state, summary)
 
@@ -325,7 +335,9 @@ class Trainer:
             if batch_idx + 1 == test_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(prefix=prefix, step=self.global_step, epoch=self.current_epoch)
+        summary = observation.scalar_summary(
+            prefix=prefix, step=self.global_step, epoch=self.current_epoch
+        )
         for callback in self._callback_iterator():
             train_state, summary = callback.on_test_epoch_end(self, train_state, summary)
 
@@ -369,10 +381,3 @@ class Trainer:
         for callback in self._callback_iterator():
             if hasattr(callback, "log_hyperparams"):
                 callback.log_hyperparams(config)
-
-
-serialization.register_serialization_state(
-    Trainer,
-    ty_to_state_dict=lambda ty: ty.to_state_dict(),
-    ty_from_state_dict=lambda ty, state: ty.from_state_dict(state),
-)

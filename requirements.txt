@@ -1,5 +1,4 @@
 jax
-flax
 chex
 rich
 tqdm
