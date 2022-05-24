@@ -1,15 +1,17 @@
 from __future__ import annotations
+from dataclasses import dataclass, field
 from typing import NamedTuple
 import jax
 import jax.numpy as jnp
 import chex
 
 
+@dataclass(frozen=True)
 class Observation(NamedTuple):
     """Summarize metrics."""
 
-    accum_metrics: dict[str, chex.Array]
-    accum_weights: dict[str, chex.Array]
+    accum_metrics: dict[str, chex.Array] = field(default_factory=dict)
+    accum_weights: dict[str, chex.Array] = field(default_factory=dict)
 
     @classmethod
     def create(cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0) -> Observation:
