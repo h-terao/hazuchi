@@ -78,8 +78,8 @@ class Trainer:
         if callbacks is None:
             callbacks = {}
 
-        self.train_fun = jax.pmap(train_fun, axis_name="batch")
-        self.eval_fun = jax.pmap(eval_fun, axis_name="batch")
+        self.train_fun = jax.pmap(train_fun, axis_name="batch", donate_argnums=(0, 1))
+        self.eval_fun = jax.pmap(eval_fun, axis_name="batch", donate_argnums=(1,))
 
         self.max_epochs = max_epochs
         self.val_interval = val_interval
@@ -169,9 +169,8 @@ class Trainer:
         prefix: str | None = None,
         test_steps_per_epoch: int = -1,
     ):
-        """Evaluate model.
+        """Evaluate model.    out = pxla.xla_pmap(
 
-        Args:
             train_state: Train state that holds parameters.
             test_data: Iterable object that yields batches of train data.
             test_fun (Callable, optional): A step function to test models.
