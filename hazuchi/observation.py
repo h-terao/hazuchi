@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import NamedTuple
+
+import jax
 import jax.numpy as jnp
 import chex
 
@@ -30,6 +32,7 @@ class Observation(NamedTuple):
     def items(self):
         return self.accum_metrics.items()
 
+    @jax.jit
     def summary(self):
         return {key: jnp.sum(val) / jnp.sum(weight) for key, (val, weight) in self.items()}
 
@@ -48,6 +51,7 @@ class Observation(NamedTuple):
         """Overwrite metrics."""
         return self | Observation.create(metrics, weight)
 
+    @jax.jit
     def __add__(self, other: Observation) -> Observation:
         updates = {}
         for key, (val, weight) in other.items():
@@ -68,6 +72,7 @@ class Observation(NamedTuple):
     def __ior__(self, other: Observation) -> Observation:
         return self | other
 
+    @jax.jit
     def __mul__(self, other: float) -> Observation:
         new_metrics = {key: (val * other, weight * other) for key, (val, weight) in self.items()}
         return Observation(new_metrics)
