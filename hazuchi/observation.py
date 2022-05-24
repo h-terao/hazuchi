@@ -31,7 +31,7 @@ class Observation(NamedTuple):
         return self.accum_metrics.items()
 
     def summary(self):
-        return {key: jnp.mean(val) / jnp.mean(weight) for key, (val, weight) in self.items()}
+        return {key: jnp.sum(val) / jnp.sum(weight) for key, (val, weight) in self.items()}
 
     def scalar_summary(self, *, prefix: str | None = None, **scalars):
         if prefix is None:
@@ -52,7 +52,7 @@ class Observation(NamedTuple):
         updates = {}
         for key, (val, weight) in other.items():
             accum_val, accum_weight = self.accum_metrics.get(key, (0, 0))
-            accum_val += val * weight
+            accum_val += val
             accum_weight += weight
             updates[key] = (accum_val, accum_weight)
         accum_metrics = dict(self.accum_metrics, **updates)
