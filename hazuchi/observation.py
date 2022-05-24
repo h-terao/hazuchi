@@ -1,34 +1,31 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-import jax
+from typing import NamedTuple
 import jax.numpy as jnp
 import chex
 
 
-@dataclass(frozen=True)
-class Observation:
+class Observation(NamedTuple):
     """Summarize metrics."""
 
-    accum_metrics: dict[str, chex.Array] = field(default_factory=dict)
-    accum_weights: dict[str, chex.Array] = field(default_factory=dict)
+    accum_metrics: dict[str, tuple[chex.Array, chex.Array]]
 
     @classmethod
     def create(cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0) -> Observation:
         if metrics is None:
             metrics = {}
-        accum_metrics = {key: val * weight for key, val in metrics.items()}
-        accum_weights = {key: weight for key in metrics}
-        return cls(accum_metrics, accum_weights)
+        return cls({key: (val, weight) for key, val in metrics.items()})
 
     def keys(self):
-        return list(self.accum_metrics)
+        return self.accum_metrics.keys()
+
+    def values(self):
+        return self.accum_metrics.values()
+
+    def items(self):
+        return self.accum_metrics.items()
 
     def summary(self):
-        return jax.tree_map(
-            lambda val, weight: jnp.mean(val) / jnp.mean(weight),
-            self.accum_metrics,
-            self.accum_weights,
-        )
+        return {key: jnp.mean(val) / jnp.mean(weight) for key, (val, weight) in self.accum_metrics.items()}
 
     def scalar_summary(self, *, prefix: str | None = None, **scalars):
         if prefix is None:
@@ -46,36 +43,28 @@ class Observation:
         return self | Observation.create(metrics, weight)
 
     def __add__(self, other: Observation) -> Observation:
-        metric_updates = {}
-        weight_updates = {}
-        for key in other.keys():
-            metric = other.accum_metrics[key]
-            weight = other.accum_weights[key]
-
-            metric_updates[key] = self.accum_metrics.get(key, 0) + metric
-            weight_updates[key] = self.accum_weights.get(key, 0) + weight
-
-        new_metrics = dict(self.accum_metrics, **metric_updates)
-        new_weights = dict(self.accum_weights, **weight_updates)
-        return Observation(new_metrics, new_weights)
+        updates = {}
+        for key, (val, weight) in other.items():
+            accum_val, accum_weight = self.accum_metrics.get(key, (0, 0))
+            accum_val += val * weight
+            accum_weight += weight
+            updates[key] = (accum_val, accum_weight)
+        accum_metrics = dict(self.accum_metrics, **updates)
+        return Observation(accum_metrics)
 
     def __iadd__(self, other: Observation) -> Observation:
         return self + other
 
     def __or__(self, other: Observation) -> Observation:
         new_metrics = dict(self.accum_metrics, **other.accum_metrics)
-        new_weights = dict(self.accum_weights, **other.accum_weights)
-        return Observation(new_metrics, new_weights)
+        return Observation(new_metrics)
 
     def __ior__(self, other: Observation) -> Observation:
         return self | other
 
     def __mul__(self, other: float) -> Observation:
-        new_metrics = jax.tree_map(lambda x: x * other, self.accum_metrics)
-        new_weights = jax.tree_map(lambda x: x * other, self.accum_weights)
-        return Observation(new_metrics, new_weights)
+        new_metrics = {key: (val * other, weight * other) for key, (val, weight) in self.items()}
+        return Observation(new_metrics)
 
     def __truediv__(self, other: float) -> Observation:
-        new_metrics = jax.tree_map(lambda x: x / other, self.accum_metrics)
-        new_weights = jax.tree_map(lambda x: x / other, self.accum_weights)
-        return Observation(new_metrics, new_weights)
+        return self * (1 / other)
