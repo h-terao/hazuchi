@@ -8,32 +8,16 @@ import chex
 class Observation(NamedTuple):
     """Summarize metrics."""
 
-    _accum_metrics: dict[str, chex.Array] | None = None
-    _accum_weights: dict[str, chex.Array] | None = None
+    accum_metrics: dict[str, chex.Array]
+    accum_weights: dict[str, chex.Array]
 
     @classmethod
-    def create(
-        cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0
-    ) -> Observation:
+    def create(cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0) -> Observation:
         if metrics is None:
             metrics = {}
         accum_metrics = {key: val * weight for key, val in metrics.items()}
         accum_weights = {key: weight for key in metrics}
         return cls(accum_metrics, accum_weights)
-
-    @property
-    def accum_metrics(self) -> dict[str, chex.Array]:
-        if self._accum_metrics is None:
-            return {}
-        else:
-            return self._accum_metrics
-
-    @property
-    def accum_weights(self) -> dict[str, chex.Array]:
-        if self._accum_weights is None:
-            return {}
-        else:
-            return self._accum_weights
 
     def keys(self):
         return list(self.accum_metrics)
