@@ -7,13 +7,19 @@ import chex
 class Observation(NamedTuple):
     """Summarize metrics."""
 
-    accum_metrics: dict[str, tuple[chex.Array, chex.Array]]
+    metrics: dict[str, tuple[chex.Array, chex.Array]] | None = None
 
     @classmethod
     def create(cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0) -> Observation:
         if metrics is None:
             metrics = {}
         return cls({key: (val, weight) for key, val in metrics.items()})
+
+    @property
+    def accum_metrics(self):
+        if self.metrics is None:
+            return {}
+        return self.metrics
 
     def keys(self):
         return self.accum_metrics.keys()
@@ -25,7 +31,7 @@ class Observation(NamedTuple):
         return self.accum_metrics.items()
 
     def summary(self):
-        return {key: jnp.mean(val) / jnp.mean(weight) for key, (val, weight) in self.accum_metrics.items()}
+        return {key: jnp.mean(val) / jnp.mean(weight) for key, (val, weight) in self.items()}
 
     def scalar_summary(self, *, prefix: str | None = None, **scalars):
         if prefix is None:
@@ -67,4 +73,4 @@ class Observation(NamedTuple):
         return Observation(new_metrics)
 
     def __truediv__(self, other: float) -> Observation:
-        return self * (1 / other)
+        return self * (1.0 / other)
