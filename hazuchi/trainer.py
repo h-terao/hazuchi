@@ -78,8 +78,8 @@ class Trainer:
         if callbacks is None:
             callbacks = {}
 
-        self.train_fun = jax.pmap(train_fun, axis_name="batch", donate_argnums=(0, 1))
-        self.eval_fun = jax.pmap(eval_fun, axis_name="batch", donate_argnums=(1,))
+        self.train_fun = jax.pmap(train_fun, axis_name="batch")
+        self.eval_fun = jax.pmap(eval_fun, axis_name="batch")
 
         self.max_epochs = max_epochs
         self.val_interval = val_interval
