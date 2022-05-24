@@ -49,7 +49,7 @@ class ProgressBar(callback.Callback):
         return train_state
 
     def estimate_total_steps(self, trainer):
-        if trainer.current_epoch + 1 % trainer.val_interval == 0:
+        if (trainer.current_epoch + 1) % trainer.val_interval == 0:
             return trainer.train_steps_per_epoch + trainer.val_steps_per_epoch
         else:
             return trainer.train_steps_per_epoch
