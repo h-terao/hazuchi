@@ -7,6 +7,14 @@ from . import callback
 
 
 class JsonLogger(callback.Callback):
+    """Logging the summaries in the local.
+
+    Args:
+        save_dir (str): Directory to save log.
+        filename (str): Filename of log.
+        log_test_summary (bool): If True, test summary is also logged.
+    """
+
     def __init__(
         self,
         save_dir: str | Path,

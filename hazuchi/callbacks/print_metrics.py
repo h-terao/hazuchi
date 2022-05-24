@@ -53,7 +53,13 @@ def filter_and_sort_entries(
 
 
 class PrintMetrics(callback.Callback):
-    def __init__(self, entries):
+    """Print the specified metrics on the console.
+
+    Args:
+        entries (list of str): List of metric names to print on the console.
+    """
+
+    def __init__(self, entries: list[str]):
         header, templates = create_header_and_templates(entries)
         self._header = header
         self._templates = templates

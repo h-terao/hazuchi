@@ -14,12 +14,19 @@ class Snapshot(callback.Callback):
     """Save the snapshot of training.
 
     Args:
-        filename
+        save_dir (str): Directory to dump snapshots.
+        filename (str): Filename of snapshot to dump.
         monitor (str | None): Name of metrics to monitor.
-                              If None, save the latest checkpoint.
-
-    Todo:
-        Reprecated / not.
+            If None, save the latest checkpoint.
+        save_every (int): Interval of save the latest snapshot.
+            Only used when monitor is None.
+        compresslevel (int): Level of snapshot compression.
+        load_train_state (Callable, optional):
+            A function that restores train_state from the snapshot.
+            If None, train_state is directly loaded by pickle.
+        save_train_state (Callable, optional):
+            A function that convert train_state to the picklable state.
+            If None, train_state itself will be pickled.
     """
 
     _priority: int = callback.PRIORITY_SNAPSHOT
@@ -30,6 +37,7 @@ class Snapshot(callback.Callback):
         filename,
         monitor: str | None = None,
         mode: str = "min",
+        save_every: int = 1,
         compresslevel: int = 9,
         load_train_state: Callable[[TrainState, Any], TrainState] | None = None,
         save_train_state: Callable[[TrainState], Any] | None = None,
@@ -39,6 +47,7 @@ class Snapshot(callback.Callback):
         self.monitor = monitor
         self.mode = mode
         self.compresslevel = compresslevel
+        self.save_every = save_every
 
         self.compare = operator.lt if mode == "min" else operator.gt
         self.best_score = math.inf if mode == "min" else -math.inf
@@ -51,7 +60,7 @@ class Snapshot(callback.Callback):
         self.save_train_state = save_train_state
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
-        if self.monitor is None:
+        if self.monitor is None and summary["epoch"] % self.save_every == 0:
             self.save(trainer, utils.unreplicate(train_state))
         elif self.monitor in summary:
             if self.compare(summary[self.monitor], self.best_score):
