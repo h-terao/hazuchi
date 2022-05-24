@@ -13,7 +13,7 @@ class Observation(NamedTuple):
     def create(cls, metrics: dict[str, chex.Array] | None = None, weight: float = 1.0) -> Observation:
         if metrics is None:
             metrics = {}
-        return cls({key: (val, weight) for key, val in metrics.items()})
+        return cls({key: (val * weight, weight) for key, val in metrics.items()})
 
     @property
     def accum_metrics(self):
