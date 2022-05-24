@@ -18,7 +18,6 @@ Hazuchi is a Python library that provides a simple trainer and callbacks for JAX
 
 - Python >= 3.7
 - jax >= 0.3.4
-- flax
 - chex
 - rich
 
