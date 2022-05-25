@@ -22,10 +22,17 @@ class Registry(dict):
         Args:
             key: A hashable object to register the registry.
             kwargs: Default arguments.
+
+        Note:
+            If you register haiku.Module, you should not pass any kwargs via register.
+            Such code raises "AttributeError: 'functools.partial' object has no attribute '__qualname__'"
         """
 
         def wrap(func_or_class):
-            self[key] = functools.partial(func_or_class, **kwargs)
+            if kwargs:
+                self[key] = functools.partial(func_or_class, **kwargs)
+            else:
+                self[key] = func_or_class
             return func_or_class
 
         return wrap
