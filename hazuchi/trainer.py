@@ -63,7 +63,7 @@ class Trainer:
         train_fun (Callable): A step function that updates train_state once.
         eval_fun (Callable): A step function that computes eval metrics from a batch.
         max_epochs (int): Number of epochs. -1 is equal to inf.
-        val_interval (int): Interval of epochs to call eval_fun.
+        val_every (int): Interval of epochs to call eval_fun.
         callbacks (dict, optional): Callbacks.
     """
 
@@ -72,7 +72,7 @@ class Trainer:
         train_fun: TrainFun,
         eval_fun: EvalFun,
         max_epochs: int = -1,
-        val_interval: int = 1,
+        val_every: int = 1,
         callbacks: dict[str, Callback] | None = None,
     ):
         if callbacks is None:
@@ -82,7 +82,7 @@ class Trainer:
         self.eval_fun = jax.pmap(eval_fun, axis_name="batch")
 
         self.max_epochs = max_epochs
-        self.val_interval = val_interval
+        self.val_every = val_every
 
         self._callbacks = callbacks
 
@@ -146,7 +146,7 @@ class Trainer:
                 train_state = callback.on_fit_epoch_start(self, train_state)
 
             train_state, summary = self._train_loop(train_state, train_data, train_steps_per_epoch)
-            if val_data and self.current_epoch % self.val_interval == 0:
+            if val_data and self.current_epoch % self.val_every == 0:
                 train_state, val_summary = self._val_loop(train_state, val_data, val_steps_per_epoch)
                 summary = dict(summary, **val_summary)
 
