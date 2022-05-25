@@ -1,4 +1,6 @@
 from __future__ import annotations
+import atexit
+
 from tqdm.rich import tqdm
 
 from . import callback
@@ -9,6 +11,10 @@ class ProgressBar(callback.Callback):
 
     def __init__(self):
         self._pbar = None
+
+        # Require to restore cursor on the terminal.
+        # https://stackoverflow.com/questions/71143520/python-rich-restore-cursor-default-values-on-exit
+        atexit.register(lambda: print("\x1b[?25h"))
 
     def on_fit_epoch_start(self, trainer, train_state):
         self._pbar = tqdm(
