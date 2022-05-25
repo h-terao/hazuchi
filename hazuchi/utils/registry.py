@@ -1,36 +1,31 @@
-class Registry:
-    def __init__(self):
-        self._memory = {}
+import functools
 
-    def register(self, key, overwrite: bool = False):
+
+class Registry(dict):
+    """A registry class to access function or class by the hashable keys.
+
+    Example:
+        >>> registry = Registry()
+        >>> @registry.register("add")
+        >>> @registry.register("add_one", y=1)
+        >>> def add(x, y):
+        >>>     return x + y
+        >>> registry["add"](2, 3)  # compute 2+3
+        2
+        >>> registry["add_one"](4)  # 4+1
+        4
+    """
+
+    def register(self, key, **kwargs):
+        """Register a function or class.
+
+        Args:
+            key: A hashable object to register the registry.
+            kwargs: Default arguments.
         """
-        Example:
-            >>> model_registry = Registry()
-            >>> @model_registry.register(name=resnet18)
-            >>> class ResNet()
-        """
 
-        def _register(func_or_class):
-            if key in self._memory and not overwrite:
-                raise ValueError(f"{key} is already registered.")
-            self._memory[key] = func_or_class
+        def wrap(func_or_class):
+            self[key] = functools.partial(func_or_class, **kwargs)
+            return func_or_class
 
-        return _register
-
-    def keys(self):
-        return self._memory.keys()
-
-    def values(self):
-        return self._memory.values()
-
-    def items(self):
-        return self._memory.items()
-
-    def __getitem__(self, key):
-        return self._memory[key]
-
-    def __contains__(self, key):
-        return key in self._memory
-
-    def __iter__(self):
-        return self._memory.keys()
+        return wrap
