@@ -4,3 +4,4 @@ from .count_num_params import count_num_params
 from . import serialization
 from .replicate import replicate, unreplicate
 from .registry import Registry
+from .cycle import cycle

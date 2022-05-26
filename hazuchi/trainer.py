@@ -17,12 +17,6 @@ TrainFun = Callable[[TrainState, Batch], Tuple[TrainState, Observation]]
 EvalFun = Callable[[TrainState, Batch], Observation]
 
 
-def _cycle(dataset):
-    while True:
-        for batch in dataset:
-            yield batch
-
-
 @jax.jit
 def _estimate_batch_size(batch: Batch) -> int:
     """Estimate batch size"""
@@ -217,7 +211,7 @@ class Trainer:
             train_state = callback.on_train_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(_cycle(dataset)):
+        for batch_idx, batch in enumerate(dataset):
             for callback in self._callback_iterator():
                 train_state = callback.on_train_step_start(self, train_state)
 
@@ -262,7 +256,7 @@ class Trainer:
             train_state = callback.on_val_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(_cycle(dataset)):
+        for batch_idx, batch in enumerate(dataset):
             for callback in self._callback_iterator():
                 train_state = callback.on_val_step_start(self, train_state)
 
@@ -297,7 +291,7 @@ class Trainer:
             train_state = callback.on_test_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(_cycle(dataset)):
+        for batch_idx, batch in enumerate(dataset):
             for callback in self._callback_iterator():
                 train_state = callback.on_test_step_start(self, train_state)
 
