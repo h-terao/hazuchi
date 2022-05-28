@@ -25,7 +25,7 @@ setup(
     url=URL,
     download_url=DOWNLOAD_URL,
     python_requires=">=3.7",
-    install_requires=_requires_from_file("requirements.txt"),  # INSTALL_REQUIRES,
+    # install_requires=_requires_from_file("requirements.txt"),  # INSTALL_REQUIRES,
     extras_require={
         "dev": [
             "flake8",
