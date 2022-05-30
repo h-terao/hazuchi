@@ -140,6 +140,7 @@ class Trainer:
             if self.max_epochs >= 0 and self.current_epoch >= self.max_epochs:
                 break
 
+            print("on_fit_epoch_start")
             for callback in self._callback_iterator():
                 train_state = callback.on_fit_epoch_start(self, train_state)
 
@@ -150,6 +151,7 @@ class Trainer:
                 )
                 summary = dict(summary, **val_summary)
 
+            print("on_fit_epoch_end")
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_fit_epoch_end(self, train_state, summary)
 
@@ -216,15 +218,18 @@ class Trainer:
         prefix = "train/"
         num_devices = jax.local_device_count()
 
+        print("train_epoch_start")
         for callback in self._callback_iterator():
             train_state = callback.on_train_epoch_start(self, train_state)
 
         # observation = Observation()
         for batch_idx, batch in enumerate(dataset):
+            print("on_train_step_start")
             for callback in self._callback_iterator():
                 train_state = callback.on_train_step_start(self, train_state)
 
             main_batch, remain_batch = _split_batch(batch, num_devices)
+            print("on_train_feed_start")
 
             # step_observation = Observation()
             if main_batch is not None:
@@ -241,6 +246,7 @@ class Trainer:
                 train_state, obs = self.train_fun(train_state, remain_batch)
                 # step_observation += obs / num_devices
 
+            print("on_train_step_end")
             # summary = step_observation.scalar_summary(
             #     prefix=prefix, step=self.global_step, epoch=self.current_epoch
             # )
@@ -253,6 +259,7 @@ class Trainer:
             if batch_idx + 1 == train_steps_per_epoch:
                 break
 
+        print("on_train_epoch_end")
         summary = {}
         # summary = observation.scalar_summary(
         #     prefix=prefix, step=self.global_step, epoch=self.current_epoch
@@ -267,11 +274,13 @@ class Trainer:
         prefix = "val/"
         num_devices = jax.local_device_count()
 
+        print("val_epoch_start")
         for callback in self._callback_iterator():
             train_state = callback.on_val_epoch_start(self, train_state)
 
         # observation = Observation()
         for batch_idx, batch in enumerate(dataset):
+            print("val_step_start")
             for callback in self._callback_iterator():
                 train_state = callback.on_val_step_start(self, train_state)
 
@@ -285,6 +294,7 @@ class Trainer:
             # summary = observation.scalar_summary(
             #     prefix=prefix, step=self.global_step, epoch=self.current_epoch
             # )
+            print("val_step_end")
             summary = {}
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_val_step_end(self, train_state, summary)
@@ -293,6 +303,7 @@ class Trainer:
             if batch_idx + 1 == val_steps_per_epoch:
                 break
 
+        print("val_epoch_end")
         # summary = observation.scalar_summary(
         #     prefix=prefix, step=self.global_step, epoch=self.current_epoch
         # )
