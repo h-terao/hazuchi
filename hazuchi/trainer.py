@@ -15,16 +15,10 @@ TrainFun = Callable[[TrainState, Batch], Tuple[TrainState, Mapping[str, chex.Arr
 EvalFun = Callable[[TrainState, Batch], Mapping[str, chex.Array]]
 
 
-@jax.jit
-def _estimate_batch_size(batch: Batch) -> int:
-    """Estimate batch size"""
-    return len(jax.tree_leaves(batch)[0])
-
-
 def split_and_yield(ds):
     num_devices = jax.local_device_count()
     for batch in ds:
-        batch_size = _estimate_batch_size(batch)
+        batch_size = len(jax.tree_leaves(batch)[0])
         remain_size = batch_size % num_devices
         main_size = batch_size - remain_size
         if main_size > 0:
