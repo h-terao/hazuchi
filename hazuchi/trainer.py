@@ -43,35 +43,6 @@ def split_and_yield(ds):
             yield {"batch": remain_batch, "weight": utils.replicate(remain_size / num_devices)}
 
 
-# def _split_batch(batch: Batch, chunk_size: int = None) -> tuple[Batch | None, Batch | None]:
-#     if chunk_size is None:
-#         chunk_size = jax.device_count()
-
-#     batch_size = _estimate_batch_size(batch)
-#     remain_size = batch_size % chunk_size  # remain_size < chunk_size.
-#     main_size = batch_size - remain_size
-
-#     if main_size > 0:
-#         main_batch = jax.tree_map(
-#             lambda x: jnp.reshape(
-#                 x[:main_size], (chunk_size, batch_size // chunk_size) + x.shape[1:]
-#             ),
-#             batch,
-#         )
-#     else:
-#         main_batch = None
-
-#     if remain_size > 0:
-#         remain_batch = jax.tree_map(
-#             lambda x: jnp.stack([x[main_size:] for _ in range(chunk_size)], axis=0),
-#             batch,
-#         )
-#     else:
-#         remain_batch = None
-
-#     return main_batch, remain_batch
-
-
 class Trainer:
     """Trainer class to train and evaluate neural networks.
 
@@ -116,7 +87,9 @@ class Trainer:
         ):
             yield callback
 
-    def _merge_scalars(self, prev_scalars, scalars):
+    def _merge_scalars(
+        self, prev_scalars: Mapping[str, float], scalars: Mapping[str, float]
+    ) -> Mapping[str, float]:
         updates = {}
         for key, (val, weight) in scalars.items():
             prev_val, prev_weight = prev_scalars.get(key, (0, 0))
@@ -125,7 +98,9 @@ class Trainer:
             updates[key] = (accum_val, accum_weight)
         return dict(prev_scalars, **updates)
 
-    def _summarize_scalars(self, scalars, prefix, **kwargs):
+    def _summarize_scalars(
+        self, scalars: Mapping[str, float], prefix: str, **kwargs
+    ) -> Mapping[str, int | float]:
         summary = {prefix + k: v / w for k, (v, w) in scalars.items()}
         summary = dict(summary, **kwargs)
         return summary
