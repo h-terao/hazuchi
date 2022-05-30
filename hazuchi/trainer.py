@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Callable, Any, Tuple
-import warnings
 
 import jax
 import jax.numpy as jnp
@@ -23,33 +22,55 @@ def _estimate_batch_size(batch: Batch) -> int:
     return len(jax.tree_leaves(batch)[0])
 
 
-def _split_batch(batch: Batch, chunk_size: int = None) -> tuple[Batch | None, Batch | None]:
-    if chunk_size is None:
-        chunk_size = jax.device_count()
+def split_and_yield(ds):
+    num_devices = jax.local_device_count()
+    for batch in ds:
+        batch_size = _estimate_batch_size(batch)
+        remain_size = batch_size % num_devices
+        main_size = batch_size - remain_size
+        if main_size > 0:
+            main_batch = jax.tree_map(
+                lambda x: jnp.reshape(
+                    x[:main_size], (num_devices, batch_size // num_devices) + x.shape[1:]
+                ),
+                batch,
+            )
+            yield main_batch, utils.replicate(batch_size)
+        if remain_size > 0:
+            remain_batch = jax.tree_map(
+                lambda x: jnp.stack([x[main_size:] for _ in range(num_devices)], axis=0),
+                batch,
+            )
+            yield remain_batch, utils.replicate(remain_size / num_devices)
 
-    batch_size = _estimate_batch_size(batch)
-    remain_size = batch_size % chunk_size  # remain_size < chunk_size.
-    main_size = batch_size - remain_size
 
-    if main_size > 0:
-        main_batch = jax.tree_map(
-            lambda x: jnp.reshape(
-                x[:main_size], (chunk_size, batch_size // chunk_size) + x.shape[1:]
-            ),
-            batch,
-        )
-    else:
-        main_batch = None
+# def _split_batch(batch: Batch, chunk_size: int = None) -> tuple[Batch | None, Batch | None]:
+#     if chunk_size is None:
+#         chunk_size = jax.device_count()
 
-    if remain_size > 0:
-        remain_batch = jax.tree_map(
-            lambda x: jnp.stack([x[main_size:] for _ in range(chunk_size)], axis=0),
-            batch,
-        )
-    else:
-        remain_batch = None
+#     batch_size = _estimate_batch_size(batch)
+#     remain_size = batch_size % chunk_size  # remain_size < chunk_size.
+#     main_size = batch_size - remain_size
 
-    return main_batch, remain_batch
+#     if main_size > 0:
+#         main_batch = jax.tree_map(
+#             lambda x: jnp.reshape(
+#                 x[:main_size], (chunk_size, batch_size // chunk_size) + x.shape[1:]
+#             ),
+#             batch,
+#         )
+#     else:
+#         main_batch = None
+
+#     if remain_size > 0:
+#         remain_batch = jax.tree_map(
+#             lambda x: jnp.stack([x[main_size:] for _ in range(chunk_size)], axis=0),
+#             batch,
+#         )
+#     else:
+#         remain_batch = None
+
+#     return main_batch, remain_batch
 
 
 class Trainer:
@@ -216,33 +237,17 @@ class Trainer:
 
     def _train_loop(self, train_state, dataset, train_steps_per_epoch: int):
         prefix = "train/"
-        num_devices = jax.local_device_count()
-
         for callback in self._callback_iterator():
             train_state = callback.on_train_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(dataset):
+        for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
+            batch, weight = batch
+
             for callback in self._callback_iterator():
                 train_state = callback.on_train_step_start(self, train_state)
 
-            main_batch, remain_batch = _split_batch(batch, num_devices)
-
-            step_observation = Observation()
-            if main_batch is not None:
-                train_state, obs = self.train_fun(train_state, main_batch)
-                step_observation += obs
-
-            if remain_batch is not None:
-                warnings.warn(
-                    (
-                        f"Batch size is not divisible by the number of devices {num_devices}. "
-                        "This configuration may causes unexpected training results."
-                    )
-                )
-                train_state, obs = self.train_fun(train_state, remain_batch)
-                step_observation += obs / num_devices
-
+            train_state, step_observation = self.train_fun(train_state, batch, weight)
             summary = step_observation.scalar_summary(
                 prefix=prefix, step=self.global_step, epoch=self.current_epoch
             )
@@ -265,26 +270,22 @@ class Trainer:
 
     def _val_loop(self, train_state, dataset, val_steps_per_epoch: int):
         prefix = "val/"
-        num_devices = jax.local_device_count()
 
         for callback in self._callback_iterator():
             train_state = callback.on_val_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(dataset):
+        for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
+            batch, weight = batch
+
             for callback in self._callback_iterator():
                 train_state = callback.on_val_step_start(self, train_state)
 
-            main_batch, remain_batch = _split_batch(batch, num_devices)
-            step_observation = Observation()
-            if main_batch is not None:
-                step_observation += self.eval_fun(train_state, main_batch)
-            if remain_batch is not None:
-                step_observation += self.eval_fun(train_state, remain_batch) / num_devices
-
+            step_observation = self.eval_fun(train_state, batch, weight)
             summary = observation.scalar_summary(
                 prefix=prefix, step=self.global_step, epoch=self.current_epoch
             )
+
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_val_step_end(self, train_state, summary)
 
@@ -306,26 +307,21 @@ class Trainer:
         if test_fun is None:
             test_fun = self.eval_fun
 
-        num_devices = jax.local_device_count()
-
         for callback in self._callback_iterator():
             train_state = callback.on_test_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(dataset):
+        for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
+            batch, weight = batch
+
             for callback in self._callback_iterator():
                 train_state = callback.on_test_step_start(self, train_state)
 
-            main_batch, remain_batch = _split_batch(batch, num_devices)
-            step_observation = Observation()
-            if main_batch is not None:
-                step_observation += test_fun(train_state, main_batch)
-            if remain_batch is not None:
-                step_observation += test_fun(train_state, remain_batch) / num_devices
-
+            step_observation = test_fun(train_state, batch, weight)
             summary = observation.scalar_summary(
                 prefix=prefix, step=self.global_step, epoch=self.current_epoch
             )
+
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_test_step_end(self, train_state, summary)
 

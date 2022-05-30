@@ -5,3 +5,4 @@ from . import serialization
 from .replicate import replicate, unreplicate
 from .registry import Registry
 from .cycle import cycle
+from .double_buffer import double_buffer
