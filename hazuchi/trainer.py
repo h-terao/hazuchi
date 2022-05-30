@@ -35,13 +35,13 @@ def split_and_yield(ds):
                 ),
                 batch,
             )
-            yield main_batch, utils.replicate(batch_size)
+            yield {"batch": main_batch, "weight": utils.replicate(batch_size)}
         if remain_size > 0:
             remain_batch = jax.tree_map(
                 lambda x: jnp.stack([x[main_size:] for _ in range(num_devices)], axis=0),
                 batch,
             )
-            yield remain_batch, utils.replicate(remain_size / num_devices)
+            yield {"batch": remain_batch, "weight": utils.replicate(remain_size / num_devices)}
 
 
 # def _split_batch(batch: Batch, chunk_size: int = None) -> tuple[Batch | None, Batch | None]:
@@ -161,7 +161,6 @@ class Trainer:
             if self.max_epochs >= 0 and self.current_epoch >= self.max_epochs:
                 break
 
-            print("on_fit_epoch_start")
             for callback in self._callback_iterator():
                 train_state = callback.on_fit_epoch_start(self, train_state)
 
@@ -172,7 +171,6 @@ class Trainer:
                 )
                 summary = dict(summary, **val_summary)
 
-            print("on_fit_epoch_end")
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_fit_epoch_end(self, train_state, summary)
 
@@ -242,7 +240,7 @@ class Trainer:
 
         observation = Observation()
         for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
-            batch, weight = batch
+            batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
                 train_state = callback.on_train_step_start(self, train_state)
@@ -276,7 +274,7 @@ class Trainer:
 
         observation = Observation()
         for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
-            batch, weight = batch
+            batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
                 train_state = callback.on_val_step_start(self, train_state)
@@ -312,7 +310,7 @@ class Trainer:
 
         observation = Observation()
         for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
-            batch, weight = batch
+            batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
                 train_state = callback.on_test_step_start(self, train_state)
