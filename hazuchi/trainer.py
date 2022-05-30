@@ -117,6 +117,20 @@ class Trainer:
         ):
             yield callback
 
+    def _merge_scalars(self, prev_scalars, scalars):
+        updates = {}
+        for key, (val, weight) in scalars.items():
+            prev_val, prev_weight = prev_scalars.get(key, (0, 0))
+            accum_val = float(prev_val + val)
+            accum_weight = float(prev_weight + weight)
+            updates[key] = (accum_val, accum_weight)
+        return dict(prev_scalars, **updates)
+
+    def _summarize_scalars(self, scalars, prefix, **kwargs):
+        summary = {prefix + k: v / w for k, (v, w) in scalars.items()}
+        summary = dict(summary, **kwargs)
+        return summary
+
     def fit(
         self,
         train_state: chex.PyTreeDef,
@@ -235,27 +249,32 @@ class Trainer:
         for callback in self._callback_iterator():
             train_state = callback.on_train_epoch_start(self, train_state)
 
-        observation = Observation()
+        scalars = {}
         for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
                 train_state = callback.on_train_step_start(self, train_state)
 
-            train_state, step_observation = self.train_fun(train_state, batch, weight)
-            summary = step_observation.scalar_summary(
-                prefix=prefix, step=self.global_step, epoch=self.current_epoch
+            train_state, step_scalars = self.train_fun(train_state, batch, weight)
+            step_scalars = {
+                k: (float(jnp.mean(v) * jnp.mean(weight)), float(jnp.mean(weight)))
+                for k, v in step_scalars.items()
+            }
+
+            summary = self._summarize_scalars(
+                step_scalars, prefix=prefix, step=self.global_step, epoch=self.current_epoch
             )
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_train_step_end(self, train_state, summary)
 
             self.global_step += 1
-            observation += step_observation
+            scalars = self._merge_scalars(scalars, step_scalars)
             if batch_idx + 1 == train_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(
-            prefix=prefix, step=self.global_step, epoch=self.current_epoch
+        summary = self._summarize_scalars(
+            scalars, prefix=prefix, step=self.global_step, epoch=self.current_epoch
         )
         for callback in self._callback_iterator():
             train_state, summary = callback.on_train_epoch_end(self, train_state, summary)
@@ -269,27 +288,31 @@ class Trainer:
         for callback in self._callback_iterator():
             train_state = callback.on_val_epoch_start(self, train_state)
 
-        observation = Observation()
+        scalars = {}
         for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
                 train_state = callback.on_val_step_start(self, train_state)
 
-            step_observation = self.eval_fun(train_state, batch, weight)
-            summary = observation.scalar_summary(
-                prefix=prefix, step=self.global_step, epoch=self.current_epoch
-            )
+            step_scalars = self.eval_fun(train_state, batch, weight)
+            step_scalars = {
+                k: (float(jnp.mean(v) * jnp.mean(weight)), float(jnp.mean(weight)))
+                for k, v in step_scalars.items()
+            }
 
+            summary = self._summarize_scalars(
+                step_scalars, prefix=prefix, step=self.global_step, epoch=self.current_epoch
+            )
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_val_step_end(self, train_state, summary)
 
-            observation += step_observation
+            scalars = self._merge_scalars(scalars, step_scalars)
             if batch_idx + 1 == val_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(
-            prefix=prefix, step=self.global_step, epoch=self.current_epoch
+        summary = self._summarize_scalars(
+            scalars, prefix=prefix, step=self.global_step, epoch=self.current_epoch
         )
         for callback in self._callback_iterator():
             train_state, summary = callback.on_val_epoch_end(self, train_state, summary)
@@ -305,27 +328,31 @@ class Trainer:
         for callback in self._callback_iterator():
             train_state = callback.on_test_epoch_start(self, train_state)
 
-        observation = Observation()
+        scalars = {}
         for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
                 train_state = callback.on_test_step_start(self, train_state)
 
-            step_observation = test_fun(train_state, batch, weight)
-            summary = observation.scalar_summary(
-                prefix=prefix, step=self.global_step, epoch=self.current_epoch
-            )
+            step_scalars = test_fun(train_state, batch, weight)
+            step_scalars = {
+                k: (float(jnp.mean(v) * jnp.mean(weight)), float(jnp.mean(weight)))
+                for k, v in step_scalars.items()
+            }
 
+            summary = self._summarize_scalars(
+                step_scalars, prefix=prefix, step=self.global_step, epoch=self.current_epoch
+            )
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_test_step_end(self, train_state, summary)
 
-            observation += step_observation
+            scalars = self._merge_scalars(scalars, step_scalars)
             if batch_idx + 1 == test_steps_per_epoch:
                 break
 
-        summary = observation.scalar_summary(
-            prefix=prefix, step=self.global_step, epoch=self.current_epoch
+        summary = self._summarize_scalars(
+            scalars, prefix=prefix, step=self.global_step, epoch=self.current_epoch
         )
         for callback in self._callback_iterator():
             train_state, summary = callback.on_test_epoch_end(self, train_state, summary)
