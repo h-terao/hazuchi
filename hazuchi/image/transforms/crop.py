@@ -99,8 +99,8 @@ def center_crop(
         )
 
     batch_size, height, width, channel = img.shape
-    y_offset = ((height - size[0] + 1) / 2).astype(int)
-    x_offset = ((width - size[1] + 1) / 2).astype(int)
+    y_offset = (jnp.array(height - size[0] + 1) / 2).astype(int)
+    x_offset = (jnp.array(width - size[1] + 1) / 2).astype(int)
 
     slice_size = (batch_size, size[0], size[1], channel)
     img = jax.lax.dynamic_slice(img, (0, y_offset, x_offset, 0), slice_size)

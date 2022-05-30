@@ -174,7 +174,7 @@ class Trainer:
         prefix: str | None = None,
         test_steps_per_epoch: int = -1,
     ):
-        """Evaluate model.    out = pxla.xla_pmap(
+        """Evaluate model.
 
             train_state: Train state that holds parameters.
             test_data: Iterable object that yields batches of train data.
