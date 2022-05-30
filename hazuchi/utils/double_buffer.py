@@ -9,12 +9,11 @@ Batch = Mapping[str, np.ndarray]
 
 def _device_put_sharded(sharded_tree, devices):
     leaves, treedef = jax.tree_flatten(sharded_tree)
-    for leave in leaves:
-        n = leave.shape[0]
-        return jax.device_put_sharded(
-            [jax.tree_unflatten(treedef, [l[i] for l in leaves]) for i in range(n)],
-            devices,
-        )
+    n = leaves[0].shape[0]
+    return jax.device_put_sharded(
+        [jax.tree_unflatten(treedef, [l[i] for l in leaves]) for i in range(n)],
+        devices,
+    )
 
 
 def double_buffer(ds: Iterable[Batch]) -> Iterator[Batch]:
