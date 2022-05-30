@@ -1,7 +1,7 @@
 from __future__ import annotations
 import atexit
 
-from tqdm import tqdm
+from tqdm.rich import tqdm
 
 from . import callback
 
