@@ -1,19 +1,18 @@
 from __future__ import annotations
-from typing import Callable, Any, Tuple
+from typing import Callable, Any, Mapping, Tuple
 
 import jax
 import jax.numpy as jnp
 import chex
 
-from .observation import Observation
 from .callbacks.callback import Callback
 from . import utils
 
 TrainState = chex.PyTreeDef
 Batch = Any
 Logger = Callback
-TrainFun = Callable[[TrainState, Batch], Tuple[TrainState, Observation]]
-EvalFun = Callable[[TrainState, Batch], Observation]
+TrainFun = Callable[[TrainState, Batch], Tuple[TrainState, Mapping[str, chex.Array]]]
+EvalFun = Callable[[TrainState, Batch], Mapping[str, chex.Array]]
 
 
 @jax.jit
@@ -252,14 +251,14 @@ class Trainer:
         scalars = {}
         for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
+            weight = float(weight[0])
 
             for callback in self._callback_iterator():
                 train_state = callback.on_train_step_start(self, train_state)
 
-            train_state, step_scalars = self.train_fun(train_state, batch, weight)
+            train_state, step_scalars = self.train_fun(train_state, batch)
             step_scalars = {
-                k: (float(jnp.mean(v) * jnp.mean(weight)), float(jnp.mean(weight)))
-                for k, v in step_scalars.items()
+                k: (float(jnp.mean(v) * weight), weight) for k, v in step_scalars.items()
             }
 
             summary = self._summarize_scalars(
@@ -291,14 +290,14 @@ class Trainer:
         scalars = {}
         for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
+            weight = float(weight[0])
 
             for callback in self._callback_iterator():
                 train_state = callback.on_val_step_start(self, train_state)
 
-            step_scalars = self.eval_fun(train_state, batch, weight)
+            step_scalars = self.eval_fun(train_state, batch)
             step_scalars = {
-                k: (float(jnp.mean(v) * jnp.mean(weight)), float(jnp.mean(weight)))
-                for k, v in step_scalars.items()
+                k: (float(jnp.mean(v) * weight), weight) for k, v in step_scalars.items()
             }
 
             summary = self._summarize_scalars(
@@ -331,14 +330,14 @@ class Trainer:
         scalars = {}
         for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
+            weight = float(weight[0])
 
             for callback in self._callback_iterator():
                 train_state = callback.on_test_step_start(self, train_state)
 
             step_scalars = test_fun(train_state, batch, weight)
             step_scalars = {
-                k: (float(jnp.mean(v) * jnp.mean(weight)), float(jnp.mean(weight)))
-                for k, v in step_scalars.items()
+                k: (float(jnp.mean(v) * weight), weight) for k, v in step_scalars.items()
             }
 
             summary = self._summarize_scalars(
