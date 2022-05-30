@@ -7,7 +7,11 @@ import chex
 
 
 class Observation(NamedTuple):
-    """Summarize metrics."""
+    """Summarize metrics.
+
+    TODO:
+        Unuse NamedTuple.
+    """
 
     metrics: dict[str, tuple[chex.Array, chex.Array]] | None = None
 
@@ -17,9 +21,7 @@ class Observation(NamedTuple):
     ) -> Observation:
         if metrics is None:
             metrics = {}
-        return cls(
-            {key: (jax.lax.stop_gradient(val * weight), weight) for key, val in metrics.items()}
-        )
+        return cls({key: (val * weight, weight) for key, val in metrics.items()})
 
     @property
     def accum_metrics(self):
@@ -60,8 +62,8 @@ class Observation(NamedTuple):
         updates = {}
         for key, (val, weight) in other.items():
             accum_val, accum_weight = self.accum_metrics.get(key, (0, 0))
-            accum_val = jax.lax.stop_gradient(accum_val + val)
-            accum_weight = jax.lax.stop_gradient(accum_weight + weight)
+            accum_val += val
+            accum_weight += weight
             updates[key] = (accum_val, accum_weight)
         accum_metrics = dict(self.accum_metrics, **updates)
         return Observation(accum_metrics)
@@ -78,10 +80,7 @@ class Observation(NamedTuple):
 
     @jax.jit
     def __mul__(self, other: float) -> Observation:
-        new_metrics = {
-            key: (jax.lax.stop_gradient(val * other), jax.lax.stop_gradient(weight * other))
-            for key, (val, weight) in self.items()
-        }
+        new_metrics = {key: (val * other, weight * other) for key, (val, weight) in self.items()}
         return Observation(new_metrics)
 
     def __truediv__(self, other: float) -> Observation:

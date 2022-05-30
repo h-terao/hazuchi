@@ -218,23 +218,20 @@ class Trainer:
         prefix = "train/"
         num_devices = jax.local_device_count()
 
-        print("train_epoch_start")
         for callback in self._callback_iterator():
             train_state = callback.on_train_epoch_start(self, train_state)
 
-        # observation = Observation()
+        observation = Observation()
         for batch_idx, batch in enumerate(dataset):
-            print("on_train_step_start")
             for callback in self._callback_iterator():
                 train_state = callback.on_train_step_start(self, train_state)
 
             main_batch, remain_batch = _split_batch(batch, num_devices)
-            print("on_train_feed_start")
 
-            # step_observation = Observation()
+            step_observation = Observation()
             if main_batch is not None:
                 train_state, obs = self.train_fun(train_state, main_batch)
-                # step_observation += obs
+                step_observation += obs
 
             if remain_batch is not None:
                 warnings.warn(
@@ -244,26 +241,22 @@ class Trainer:
                     )
                 )
                 train_state, obs = self.train_fun(train_state, remain_batch)
-                # step_observation += obs / num_devices
+                step_observation += obs / num_devices
 
-            print("on_train_step_end")
-            # summary = step_observation.scalar_summary(
-            #     prefix=prefix, step=self.global_step, epoch=self.current_epoch
-            # )
-            summary = {}
+            summary = step_observation.scalar_summary(
+                prefix=prefix, step=self.global_step, epoch=self.current_epoch
+            )
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_train_step_end(self, train_state, summary)
 
             self.global_step += 1
-            # observation += step_observation
+            observation += step_observation
             if batch_idx + 1 == train_steps_per_epoch:
                 break
 
-        print("on_train_epoch_end")
-        summary = {}
-        # summary = observation.scalar_summary(
-        #     prefix=prefix, step=self.global_step, epoch=self.current_epoch
-        # )
+        summary = observation.scalar_summary(
+            prefix=prefix, step=self.global_step, epoch=self.current_epoch
+        )
         for callback in self._callback_iterator():
             train_state, summary = callback.on_train_epoch_end(self, train_state, summary)
 
@@ -274,13 +267,11 @@ class Trainer:
         prefix = "val/"
         num_devices = jax.local_device_count()
 
-        print("val_epoch_start")
         for callback in self._callback_iterator():
             train_state = callback.on_val_epoch_start(self, train_state)
 
-        # observation = Observation()
+        observation = Observation()
         for batch_idx, batch in enumerate(dataset):
-            print("val_step_start")
             for callback in self._callback_iterator():
                 train_state = callback.on_val_step_start(self, train_state)
 
@@ -291,23 +282,19 @@ class Trainer:
             if remain_batch is not None:
                 step_observation += self.eval_fun(train_state, remain_batch) / num_devices
 
-            # summary = observation.scalar_summary(
-            #     prefix=prefix, step=self.global_step, epoch=self.current_epoch
-            # )
-            print("val_step_end")
-            summary = {}
+            summary = observation.scalar_summary(
+                prefix=prefix, step=self.global_step, epoch=self.current_epoch
+            )
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_val_step_end(self, train_state, summary)
 
-            # observation += step_observation
+            observation += step_observation
             if batch_idx + 1 == val_steps_per_epoch:
                 break
 
-        print("val_epoch_end")
-        # summary = observation.scalar_summary(
-        #     prefix=prefix, step=self.global_step, epoch=self.current_epoch
-        # )
-        summary = {}
+        summary = observation.scalar_summary(
+            prefix=prefix, step=self.global_step, epoch=self.current_epoch
+        )
         for callback in self._callback_iterator():
             train_state, summary = callback.on_val_epoch_end(self, train_state, summary)
 
