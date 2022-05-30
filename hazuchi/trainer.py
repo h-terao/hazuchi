@@ -236,7 +236,7 @@ class Trainer:
             train_state = callback.on_train_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
+        for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
@@ -270,7 +270,7 @@ class Trainer:
             train_state = callback.on_val_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
+        for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
@@ -306,7 +306,7 @@ class Trainer:
             train_state = callback.on_test_epoch_start(self, train_state)
 
         observation = Observation()
-        for batch_idx, batch in enumerate(utils.double_buffer(map(split_and_yield, dataset))):
+        for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
 
             for callback in self._callback_iterator():
