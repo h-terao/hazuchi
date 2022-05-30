@@ -174,9 +174,6 @@ class Trainer:
             for callback in self._callback_iterator():
                 train_state, summary = callback.on_fit_epoch_end(self, train_state, summary)
 
-            if len(self._callbacks) == 0:
-                print(self.global_step, self.current_epoch)
-
         for callback in self._callback_iterator():
             train_state = callback.on_fit_end(self, train_state)
 
