@@ -24,17 +24,17 @@ def split_and_yield(ds):
         if main_size > 0:
             main_batch = jax.tree_map(
                 lambda x: jnp.reshape(
-                    x[:main_size], (num_devices, batch_size // num_devices) + x.shape[1:]
+                    x[:main_size], (num_devices, main_size // num_devices) + x.shape[1:]
                 ),
                 batch,
             )
-            yield {"batch": main_batch, "weight": utils.replicate(batch_size)}
+            yield {"batch": main_batch, "weight": utils.replicate(main_size)}
         if remain_size > 0:
             remain_batch = jax.tree_map(
                 lambda x: jnp.stack([x[main_size:] for _ in range(num_devices)], axis=0),
                 batch,
             )
-            yield {"batch": remain_batch, "weight": utils.replicate(remain_size / num_devices)}
+            yield {"batch": remain_batch, "weight": utils.replicate(remain_size)}
 
 
 class Trainer:
@@ -220,14 +220,15 @@ class Trainer:
         scalars = {}
         for batch_idx, batch in enumerate(utils.double_buffer(split_and_yield(dataset))):
             batch, weight = batch["batch"], batch["weight"]
-            weight = float(weight[0])
+            weight = float(weight[0].block_until_ready())
 
             for callback in self._callback_iterator():
                 train_state = callback.on_train_step_start(self, train_state)
 
             train_state, step_scalars = self.train_fun(train_state, batch)
             step_scalars = {
-                k: (float(jnp.mean(v) * weight), weight) for k, v in step_scalars.items()
+                k: (float(jnp.mean(v).block_until_ready()) * weight, weight)
+                for k, v in step_scalars.items()
             }
 
             summary = self._summarize_scalars(
@@ -266,7 +267,8 @@ class Trainer:
 
             step_scalars = self.eval_fun(train_state, batch)
             step_scalars = {
-                k: (float(jnp.mean(v) * weight), weight) for k, v in step_scalars.items()
+                k: (float(jnp.mean(v).block_until_ready()) * weight, weight)
+                for k, v in step_scalars.items()
             }
 
             summary = self._summarize_scalars(
@@ -306,7 +308,8 @@ class Trainer:
 
             step_scalars = test_fun(train_state, batch, weight)
             step_scalars = {
-                k: (float(jnp.mean(v) * weight), weight) for k, v in step_scalars.items()
+                k: (float(jnp.mean(v).block_until_ready()) * weight, weight)
+                for k, v in step_scalars.items()
             }
 
             summary = self._summarize_scalars(
