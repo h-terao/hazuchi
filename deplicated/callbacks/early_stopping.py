@@ -27,7 +27,7 @@ class EarlyStopping(callback.Callback):
             else:
                 self.count += 1
                 if self.count > self.patience:
-                    trainer.fitted = True
+                    trainer._fitted = True
         return train_state, summary
 
     def to_state_dict(self):
@@ -36,4 +36,3 @@ class EarlyStopping(callback.Callback):
     def from_state_dict(self, state):
         self.best_score = state["best"]
         self.count = state["count"]
-        return self

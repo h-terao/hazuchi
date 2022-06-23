@@ -2,3 +2,4 @@ jax
 chex
 rich
 tqdm
+flax

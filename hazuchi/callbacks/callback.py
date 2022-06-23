@@ -1,3 +1,6 @@
+from flax.serialization import register_serialization_state
+
+
 PRIORITY_WRITER = 300
 PRIORITY_EDITOR = 200
 PRIORITY_READER = 100
@@ -15,30 +18,6 @@ class Callback:
     def on_fit_epoch_start(self, trainer, train_state):
         return train_state
 
-    def on_train_epoch_start(self, trainer, train_state):
-        return train_state
-
-    def on_train_step_start(self, trainer, train_state):
-        return train_state
-
-    def on_train_step_end(self, trainer, train_state, summary):
-        return train_state, summary
-
-    def on_train_epoch_end(self, trainer, train_state, summary):
-        return train_state, summary
-
-    def on_val_epoch_start(self, trainer, train_state):
-        return train_state
-
-    def on_val_step_start(self, trainer, train_state):
-        return train_state
-
-    def on_val_step_end(self, trainer, train_state, summary):
-        return train_state, summary
-
-    def on_val_epoch_end(self, trainer, train_state, summary):
-        return train_state, summary
-
     def on_fit_epoch_end(self, trainer, train_state, summary):
         return train_state, summary
 
@@ -51,21 +30,21 @@ class Callback:
     def on_test_epoch_start(self, trainer, train_state):
         return train_state
 
-    def on_test_step_start(self, trainer, train_state):
-        return train_state
-
-    def on_test_step_end(self, trainer, train_state, summary):
-        return train_state, summary
-
     def on_test_epoch_end(self, trainer, train_state, summary):
         return train_state, summary
 
-    def on_test_end(self, trainer, train_state):
-        return train_state
+    def on_test_end(self, trainer, train_state, summary):
+        return train_state, summary
 
     def to_state_dict(self):
         return {}
 
-    def from_state_dict(self, state) -> None:
-        # do nothing in default.
-        return None
+    def from_state_dict(self, state):
+        return self
+
+
+register_serialization_state(
+    Callback,
+    ty_to_state_dict=lambda x: x.to_state_dict(),
+    ty_from_state_dict=lambda x, s: x.from_state_dict(s),
+)

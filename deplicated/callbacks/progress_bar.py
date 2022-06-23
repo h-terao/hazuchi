@@ -16,15 +16,40 @@ class ProgressBar(callback.Callback):
         # https://stackoverflow.com/questions/71143520/python-rich-restore-cursor-default-values-on-exit
         atexit.register(lambda: print("\x1b[?25h"))
 
-    def on_fit_start(self, trainer, train_state):
-        self._pbar = tqdm(total=trainer.max_epoch, desc="[Training]", unit="epoch")
+    def on_fit_epoch_start(self, trainer, train_state):
+        self._pbar = tqdm(
+            total=self.estimate_total_steps(trainer),
+            leave=False,
+            desc=f"[Epoch: {trainer.current_epoch}]",
+        )
         return train_state
 
-    def on_fit_epoch_end(self, trainer, train_state, summary):
+    def on_train_step_end(self, trainer, train_state, summary):
         self._pbar.update()
         return train_state, summary
 
-    def on_fit_end(self, trainer, train_state):
+    def on_val_step_end(self, trainer, train_state, summary):
+        self._pbar.update()
+        return train_state, summary
+
+    def on_fit_epoch_end(self, trainer, train_state, summary):
+        self._pbar.close()
+        self._pbar = None
+        return train_state, summary
+
+    def on_test_start(self, trainer, train_state):
+        self._pbar = tqdm(
+            total=trainer.test_steps_per_epoch,
+            leave=False,
+            desc="[Testing]",
+        )
+        return train_state
+
+    def on_test_step_end(self, trainer, train_state, summary):
+        self._pbar.update()
+        return train_state, summary
+
+    def on_test_end(self, trainer, train_state):
         self._pbar.close()
         self._pbar = None
         return train_state

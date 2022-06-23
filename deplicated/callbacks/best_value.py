@@ -8,18 +8,17 @@ class BestValue(callback.Callback):
     """Log the best value.
 
     Args:
-        monitor (str): Metric name to monitor.
         name (str): Name of the best metrics.
-            If None, use "{monitor}_best"
+        monitor (str): Metric name to monitor.
         mode (str): min or max.
     """
 
     priority: int = callback.PRIORITY_WRITER
 
-    def __init__(self, monitor: str, name: str | None = None, mode: str = "min"):
+    def __init__(self, name: str, monitor: str, mode: str = "min"):
         assert mode in ["min", "max"]
+        self.name = name
         self.monitor = monitor
-        self.name = name or f"{monitor}_best"
         self.compare = min if mode == "min" else max
         self.best_score = math.inf if mode == "min" else -math.inf
 
@@ -31,6 +30,5 @@ class BestValue(callback.Callback):
     def to_state_dict(self):
         return {"best": self.best_score}
 
-    def from_state_dict(self, state) -> BestValue:
+    def from_state_dict(self, state) -> None:
         self.best_score = state["best"]
-        return self

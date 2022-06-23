@@ -1,105 +1,101 @@
 from __future__ import annotations
-from typing import Any, Callable
 import math
 import operator
 from pathlib import Path
+import pickle
+
+from flax import jax_utils
+from flax.serialization import from_state_dict, to_state_dict
 
 from . import callback
-from .. import utils
-
-TrainState = Any
 
 
 class Snapshot(callback.Callback):
     """Save the snapshot of training.
 
     Args:
-        save_dir (str): Directory to dump snapshots.
         filename (str): Filename of snapshot to dump.
         monitor (str | None): Name of metrics to monitor.
             If None, save the latest checkpoint.
         save_every (int): Interval of save the latest snapshot.
             Only used when monitor is None.
-        compresslevel (int): Level of snapshot compression.
-        load_train_state (Callable, optional):
-            A function that restores train_state from the snapshot.
-            If None, train_state is directly loaded by pickle.
-        save_train_state (Callable, optional):
-            A function that convert train_state to the picklable state.
-            If None, train_state itself will be pickled.
+        mode (str): min or max.
+        load_before_fitting (bool): Load the checkpoint before fitting if it exists.
+        load_before_testing (bool): Load the checkpoint before testing if it exists.
     """
 
     _priority: int = callback.PRIORITY_SNAPSHOT
 
     def __init__(
         self,
-        save_dir,
-        filename,
+        filename: str | Path,
         monitor: str | None = None,
-        mode: str = "min",
         save_every: int = 1,
-        compresslevel: int = 9,
-        load_train_state: Callable[[TrainState, Any], TrainState] | None = None,
-        save_train_state: Callable[[TrainState], Any] | None = None,
+        mode: str = "min",
+        load_before_fitting: bool = False,
+        load_before_testing: bool = False,
     ) -> None:
-        self.save_dir = save_dir
+        assert mode in ["min", "max"]
+
         self.filename = filename
         self.monitor = monitor
-        self.mode = mode
-        self.compresslevel = compresslevel
         self.save_every = save_every
+        self.mode = mode
+
+        self.load_before_fitting = load_before_fitting
+        self.load_before_testing = load_before_testing
 
         self.compare = operator.lt if mode == "min" else operator.gt
         self.best_score = math.inf if mode == "min" else -math.inf
 
-        if load_train_state is None:
-            load_train_state = lambda train_state, state: state  # noqa: E731
-        if save_train_state is None:
-            save_train_state = lambda train_state: train_state  # noqa: E731
-        self.load_train_state = load_train_state
-        self.save_train_state = save_train_state
+    def on_fit_start(self, trainer, train_state):
+        if self.load_before_fitting:
+            ckpt_file_path = trainer.out_dir_path / self.filename
+            if ckpt_file_path.exists():
+                state = pickle.loads(ckpt_file_path.read_bytes())
+                trainer = from_state_dict(trainer, state["trainer"])
+                train_state = from_state_dict(train_state, state["train_state"])
+        return train_state
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
-        if self.monitor is None and summary["epoch"] % self.save_every == 0:
-            self.save(trainer, utils.unreplicate(train_state))
-        elif self.monitor in summary:
-            if self.compare(summary[self.monitor], self.best_score):
-                self.best_score = summary[self.monitor]
-                self.save(trainer, utils.unreplicate(train_state))
+        if self.monitor is None and trainer.global_step % self.save_every == 0:
+            self.save(trainer, train_state)
+        elif self.monitor in summary and self.compare(summary[self.monitor], self.best_score):
+            self.best_score = summary[self.monitor]
+            self.save(trainer, train_state)
         return train_state, summary
 
-    def save(self, trainer, train_state: TrainState) -> None:
-        Path(self.save_dir).mkdir(parents=True, exist_ok=True)
+    def on_test_start(self, trainer, train_state):
+        if self.load_before_testing:
+            ckpt_file_path = trainer.out_dir_path / self.filename
+            if ckpt_file_path.exists():
+                state = pickle.loads(ckpt_file_path.read_bytes())
+                train_state = from_state_dict(train_state, state["train_state"])
+        return train_state
 
-        state = {
-            "trainer": trainer.to_state_dict(),
-            "train_state": self.save_train_state(train_state),
-        }
-        utils.serialization.save_state(self.snapshot_path, state, compresslevel=self.compresslevel)
+    def save(self, trainer, train_state):
+        ckpt_file_path = trainer.out_dir_path / self.filename
+        ckpt_file_path.parent.mkdir(parents=True, exist_ok=True)
+        ckpt_file_path.write_bytes(
+            pickle.dumps(
+                {
+                    "trainer": to_state_dict(trainer),
+                    "train_state": to_state_dict(jax_utils.unreplicate(train_state)),
+                }
+            )
+        )
 
-    def load(
-        self,
-        trainer,
-        train_state: TrainState,
-        only_train_state: bool = False,
-        strict: bool = False,
-    ):
-        if self.exists():
-            snapshot = utils.serialization.load_state(self.snapshot_path)
-            if not only_train_state:
-                trainer = trainer.from_state_dict(snapshot["trainer"])
-            train_state = self.load_train_state(train_state, snapshot["train_state"])
-            return trainer, train_state
-        elif not strict:
-            return trainer, train_state
-        else:
-            raise FileNotFoundError(f"{self.snapshot_path} is not found.")
+    def load(self, filename, train_state):
+        state_bytes = Path(filename).read_bytes()
+        state_dict = pickle.loads(state_bytes)["train_state"]
+        return from_state_dict(train_state, state_dict)
 
     def to_state_dict(self):
         return {"best": self.best_score}
 
     def from_state_dict(self, state) -> None:
         self.best_score = state["best"]
+        return self
 
     @property
     def priority(self) -> int:
@@ -111,10 +107,3 @@ class Snapshot(callback.Callback):
     @property
     def save_last(self) -> bool:
         return self.monitor is None
-
-    def exists(self) -> bool:
-        return self.snapshot_path.exists()
-
-    @property
-    def snapshot_path(self) -> Path:
-        return Path(self.save_dir, self.filename)

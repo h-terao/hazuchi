@@ -4,7 +4,7 @@ from . import callback
 
 
 class Timer(callback.Callback):
-    """Log elapsed time of training and validation"""
+    """Log elapsed times of training and validation."""
 
     priority: int = callback.PRIORITY_WRITER
 

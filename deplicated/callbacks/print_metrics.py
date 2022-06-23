@@ -95,4 +95,3 @@ class PrintMetrics(callback.Callback):
 
     def from_state_dict(self, state) -> None:
         self._log = json.loads(state["_log"])
-        return self

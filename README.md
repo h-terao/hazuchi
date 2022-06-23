@@ -28,14 +28,20 @@ However, you must install jax before the Hazuchi installation.
 pip install git+https://github.com/h-terao/hazuchi
 ```
 
-## Modules
-Hazuchi consist of the following modules.
+## Examples
 
-- Trainer: A trainer class.
-- Observation: A class for metric summarization.
-- callbacks: Classes to extend the trainer.
-- functional: Popular functions.
-- torch_utils: PyTorch utilities to use data.DataLoader with JAX.
-- utils: Utilities.
-- image
-    - transforms: Functions to transform images. The pixel value should be in [0, 1].
+```python
+from hazuchi import Trainer, callbacks
+
+trainer = Trainer(
+    out_dir="./results",
+    max_epochs=100,
+    train_fn,
+    val_fn,
+    test_fn,
+    callbacks=callbacks,
+    prefetch=True
+)
+
+train_state = trainer.fit(...)
+```

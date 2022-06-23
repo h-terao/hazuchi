@@ -2,37 +2,39 @@ import functools
 
 
 class Registry(dict):
-    """A registry class to access function or class by the hashable keys.
+    """A simple registry class.
 
-    Example:
+    Examples:
         >>> registry = Registry()
         >>> @registry.register("add")
-        >>> @registry.register("add_one", y=1)
-        >>> def add(x, y):
-        >>>     return x + y
-        >>> registry["add"](2, 3)  # compute 2+3
+        >>> def add(a, b):
+        >>>     return a + b
+        >>> registry["multiply"] = lambda a, b: a*b
+        >>> sorted(registry)
+        ["add", "multiply"]
+        >>> registry.add(1, 2)
+        3
+        >>> registry["add"](1, 2)
+        3
+        >>> registry.multiply(1, 2)
         2
-        >>> registry["add_one"](4)  # 4+1
-        4
     """
 
-    def register(self, key, **kwargs):
-        """Register a function or class.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__dict__ = self
 
-        Args:
-            key: A hashable object to register the registry.
-            kwargs: Default arguments.
+    def register(self, key: str, /, **kwargs):
+        if key in self:
+            raise ValueError(
+                f"{key} is already registered. Use different keys to register func or class."
+            )
 
-        Note:
-            If you register haiku.Module, you should not pass any kwargs via register.
-            Such code raises "AttributeError: 'functools.partial' object has no attribute '__qualname__'"
-        """
-
-        def wrap(func_or_class):
+        def deco(func_or_class):
             if kwargs:
                 self[key] = functools.partial(func_or_class, **kwargs)
             else:
                 self[key] = func_or_class
             return func_or_class
 
-        return wrap
+        return deco
