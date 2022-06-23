@@ -1,7 +1,7 @@
 from __future__ import annotations
+from typing import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
-from dataclasses import dataclass
 
 import jax
 from flax import jax_utils
@@ -13,12 +13,27 @@ from .scalars import accumulate_scalars, summarize_scalars
 
 @dataclass
 class Trainer:
+    """Trainer.
+
+    Args:
+        out_dir: Output directory.
+        max_epochs (int): Maximum number of epochs.
+            If a negative value is specified, trainer fit models infinite times.
+        train_fn
+        val_fn
+        test_fn
+        callbacks
+        val_every
+        prefetch
+        devices
+    """
+
     out_dir: str
     max_epochs: int
     train_fn: Callable
     val_fn: Callable
     test_fn: Callable | None = None
-    callbacks: Any = None
+    callbacks: dict = field(default_factory=dict)
     val_every: int = 1
     prefetch: bool = False
     devices: list | None = None
