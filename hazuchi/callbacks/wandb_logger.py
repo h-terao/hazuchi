@@ -16,7 +16,7 @@ class WandbLogger(callback.Callback):
     Args:
         project (str): Title of the project.
         name (str, optional): Experiment name.
-        code_dir (str, optional): If specified, upload codes to wandb.
+        code_dir (str, optional): If specified, call wandb.run.log_code(root=code_dir).
     """
 
     def __init__(
@@ -76,5 +76,6 @@ class WandbLogger(callback.Callback):
     def to_state_dict(self):
         return {"id": self.id}
 
-    def from_state_dict(self, state) -> None:
+    def from_state_dict(self, state):
         self.id = state["id"]
+        return self

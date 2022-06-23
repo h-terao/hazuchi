@@ -47,8 +47,8 @@ class JsonLogger(callback.Callback):
         warnings.warn("JsonLogger does not support log_hyperparams.")
 
     def to_state_dict(self):
-        return {"_log": json.dumps(self._log)}
+        return {"_log": self._log}
 
     def from_state_dict(self, state) -> None:
-        self._log = json.loads(state["_log"])
+        self._log = state["_log"]
         return self

@@ -1,75 +1,73 @@
+"""MNIST example."""
 from __future__ import annotations
 import functools
 import math
+import sys
 
 import jax
 import jax.numpy as jnp
 import jax.random as jr
-from flax import linen, training, core
+from flax import linen, core
+from flax.training.train_state import TrainState
 import optax
 import einops
-import hub
 import tensorflow as tf
+import tensorflow_datasets as tfds
 
+sys.path.append(".")
 import hazuchi
 
 tf.config.experimental.set_visible_devices([], "GPU")
 
 
-def get_dataset(path: str, batch_size: int = 32, train: bool = False):
+def get_dataset(batch_size: int = 32, split: str = "train"):
     def map_fn(item):
-        x = einops.repeat(item["image"], "N H W -> N H W C", C=3)
-        if train:
-            x = tf.pad(x, [[0, 0], [4, 4], [4, 4], [0, 0]], mode="REFLECT")
-            x = tf.image.random_crop(x, size=28)
-            x = tf.image.random_flip_left_right(x)
+        x = einops.repeat(item["image"], "N H W C -> N H W (repeat C)", repeat=3)
+        # if split == "train":
+        # x = tf.image.random_flip_left_right(x)
         return {"images": tf.cast(x, tf.float32) / 255.0, "labels": item["label"]}
 
-    data: tf.data.Dataset = hub.load(path)
-    if train:
-        iter_len = len(data) // batch_size
+    data = tfds.load("mnist", split=split, shuffle_files=True)
+    N = 60000 if split == "train" else 10000
+    if split == "train":
+        iter_len = N // batch_size
     else:
-        iter_len = math.ceil(len(data) / batch_size)
+        iter_len = math.ceil(N / batch_size)
 
-    data = data.tensorflow()
-    data = data.cache()
-    if train:
-        data = data.repeat()
+    if split == "train":
+        data = data.cache().repeat().shuffle(N)
     data = data.batch(batch_size, num_parallel_calls=tf.data.AUTOTUNE)
     data = data.map(map_fn, tf.data.AUTOTUNE)
-    if not train:
-        data = data.repeat()
+    if split != "train":
+        data = data.cache().repeat()
+    data = data.prefetch(tf.data.AUTOTUNE)
     data_iter = data.as_numpy_iterator()
     return data_iter, iter_len
 
 
 class CNN(linen.Module):
+    """A simple CNN model.
+
+    Modify from https://github.com/google/flax/blob/main/examples/mnist/train.py
+    """
+
     @linen.compact
     def __call__(self, x, train):
-        return linen.Sequential(
-            [
-                linen.Conv(32, [3, 3], use_bias=False),
-                linen.BatchNorm(use_running_average=not train),
-                jax.nn.relu(),
-                linen.Conv(64, [3, 3], use_bias=False),
-                linen.BatchNorm(use_running_average=not train),
-                jax.nn.relu(),
-                linen.Conv(128, [3, 3], use_bias=False),
-                linen.BatchNorm(use_running_average=not train),
-                jax.nn.relu(),
-                linen.Conv(256, [3, 3], use_bias=False),
-                linen.BatchNorm(use_running_average=not train),
-                jax.nn.relu(),
-                lambda x: jnp.mean(x, axis=(1, 2)),
-                linen.Dense(128),
-                jax.nn.relu(),
-                linen.Dense(10),
-            ]
-        )(x)
+        x = linen.Conv(features=32, kernel_size=(3, 3))(x)
+        x = linen.relu(x)
+        x = linen.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+        x = linen.Conv(features=64, kernel_size=(3, 3))(x)
+        x = linen.relu(x)
+        x = linen.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+        x = x.reshape((x.shape[0], -1))  # flatten
+        x = linen.Dense(features=256)(x)
+        x = linen.relu(x)
+        x = linen.Dense(features=10)(x)
+        return x
 
 
-class TrainState(training.train_state.TrainState):
-    model_state: core.FrozenDict
+class TrainState(TrainState):
+    model_state: core.FrozenDict = None
 
 
 def init_fn(rng, batch):
@@ -101,7 +99,7 @@ def train_fn(train_state: TrainState, batch):
         return loss, (new_model_state, {"loss": loss, "accuracy": accuracy})
 
     grads, (new_model_state, scalars) = grad_fn(train_state.params)
-    new_train_state = train_state.apply_gradients(grads, model_state=new_model_state)
+    new_train_state = train_state.apply_gradients(grads=grads, model_state=new_model_state)
     return new_train_state, scalars
 
 
@@ -118,10 +116,10 @@ def eval_fn(train_state, batch):
 
 
 def main():
-
+    print("Create trainer.")
     trainer = hazuchi.Trainer(
         "out",
-        max_epochs=100,
+        max_epochs=10,
         train_fn=train_fn,
         val_fn=eval_fn,
         callbacks={
@@ -147,7 +145,7 @@ def main():
                 monitor="train/accuracy",
                 mode="max",
             ),
-            "snapshot": hazuchi.callbacks.Snapshot(
+            "best_snap": hazuchi.callbacks.Snapshot(
                 "best.ckpt",
                 monitor="val/accuracy",
                 mode="max",
@@ -158,17 +156,25 @@ def main():
                 load_before_fitting=True,
             ),
         },
+        prefetch=True,  # If you use CPU or TPU, set prefetch=False
     )
+
+    # Logging hyperparams
+    trainer.log_hyperparams({"dummy_params": 1})
 
     rng = jr.PRNGKey(9)
 
-    train_loader, train_len = get_dataset("hub://activeloop/mnist-train", 128, train=True)
-    test_loader, test_len = get_dataset("hub://activeloop/mnist-train", 512)
+    print("Data loader.")
+    train_loader, train_len = get_dataset(128, "train")
+    test_loader, test_len = get_dataset(512, "test")
 
+    print("Initialize")
     rng, init_rng = jr.split(rng)
-    train_state = init_fn(init_rng, next(train_loader))
+    batch = next(iter(train_loader))
+    train_state = init_fn(init_rng, batch)
 
     # Start training.
+    print("Train")
     train_state = trainer.fit(
         train_state,
         train_loader,
@@ -178,8 +184,8 @@ def main():
     )
 
     # Testing
-    summary = trainer.test(train_state, test_loader, test_len)
-    print(summary)
+    print("Test")
+    trainer.test(train_state, test_loader, test_len)
 
 
 if __name__ == "__main__":

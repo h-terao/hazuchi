@@ -54,7 +54,9 @@ class Snapshot(callback.Callback):
             if ckpt_file_path.exists():
                 state = pickle.loads(ckpt_file_path.read_bytes())
                 trainer = from_state_dict(trainer, state["trainer"])
+                train_state = jax_utils.unreplicate(train_state)
                 train_state = from_state_dict(train_state, state["train_state"])
+                train_state = jax_utils.replicate(train_state, trainer.devices)
         return train_state
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
@@ -70,7 +72,9 @@ class Snapshot(callback.Callback):
             ckpt_file_path = trainer.out_dir_path / self.filename
             if ckpt_file_path.exists():
                 state = pickle.loads(ckpt_file_path.read_bytes())
+                train_state = jax_utils.unreplicate(train_state)
                 train_state = from_state_dict(train_state, state["train_state"])
+                train_state = jax_utils.replicate(train_state, trainer.devices)
         return train_state
 
     def save(self, trainer, train_state):

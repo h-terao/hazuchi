@@ -1,8 +1,12 @@
 from __future__ import annotations
+import logging
 import math
 import operator
 
 from . import callback
+
+
+logger = logging.getLogger(__name__)
 
 
 class EarlyStopping(callback.Callback):
@@ -27,7 +31,9 @@ class EarlyStopping(callback.Callback):
             else:
                 self.count += 1
                 if self.count > self.patience:
+                    logger.info("Early stopping is fired! Stop fitting...")
                     trainer.fitted = True
+
         return train_state, summary
 
     def to_state_dict(self):

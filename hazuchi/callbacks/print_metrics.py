@@ -5,7 +5,6 @@ https://github.com/pfnet/pytorch-pfn-extras/blob/master/pytorch_pfn_extras/train
 """
 from __future__ import annotations
 from copy import deepcopy
-import json
 
 from rich import pretty
 
@@ -91,8 +90,8 @@ class PrintMetrics(callback.Callback):
         return train_state, summary
 
     def to_state_dict(self):
-        return {"_log": json.dumps(self._log)}
+        return {"_log": self._log}
 
     def from_state_dict(self, state) -> None:
-        self._log = json.loads(state["_log"])
+        self._log = state["_log"]
         return self

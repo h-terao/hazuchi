@@ -1,23 +1,18 @@
 from __future__ import annotations
-import atexit
-
 from tqdm.rich import tqdm
-
 from . import callback
 
 
 class ProgressBar(callback.Callback):
     """Show progress bar."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._pbar = None
 
-        # Require to restore cursor on the terminal.
-        # https://stackoverflow.com/questions/71143520/python-rich-restore-cursor-default-values-on-exit
-        atexit.register(lambda: print("\x1b[?25h"))
-
     def on_fit_start(self, trainer, train_state):
-        self._pbar = tqdm(total=trainer.max_epoch, desc="[Training]", unit="epoch")
+        self._pbar = tqdm(total=trainer.max_epochs, desc="[Training]")
+        self._pbar.update(trainer.current_epoch)
+        self._pbar.refresh()
         return train_state
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
@@ -29,8 +24,6 @@ class ProgressBar(callback.Callback):
         self._pbar = None
         return train_state
 
-    def estimate_total_steps(self, trainer):
-        if (trainer.current_epoch + 1) % trainer.val_every == 0:
-            return trainer.train_steps_per_epoch + trainer.val_steps_per_epoch
-        else:
-            return trainer.train_steps_per_epoch
+    def __del__(self):
+        if self._pbar is not None:
+            self._pbar.close()

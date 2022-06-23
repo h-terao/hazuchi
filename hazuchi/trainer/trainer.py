@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import jax
 from flax import jax_utils
-from flax.serialization import to_state_dict, from_state_dict, register_serialization_state
+from flax.serialization import register_serialization_state
 
 from .split_batches import split_batches
 from .scalars import accumulate_scalars, summarize_scalars
@@ -19,6 +19,7 @@ class Trainer:
     val_fn: Callable
     test_fn: Callable | None = None
     callbacks: Any = None
+    val_every: int = 1
     prefetch: bool = False
     devices: list | None = None
 
@@ -27,6 +28,8 @@ class Trainer:
     def __post_init__(self):
         self._sort_callbacks()
         self.out_dir_path = Path(self.out_dir)
+
+        self.out_dir_path.mkdir(parents=True, exist_ok=True)
 
         self.global_step: int = 0
         self.current_epoch: int = 0
@@ -41,7 +44,9 @@ class Trainer:
         self._sort_callbacks()
 
     def _sort_callbacks(self):
-        self._sorted_callbacks = sorted(self.callbacks.values(), lambda x: x.priority, reverse=True)
+        self._sorted_callbacks = sorted(
+            self.callbacks.values(), key=lambda x: x.priority, reverse=True
+        )
 
     def _loop_callbacks(self, reverse: bool = False):
         """yield every registered callback.
@@ -83,10 +88,6 @@ class Trainer:
 
         while True:
             if self.current_epoch == self.max_epochs:
-                break
-
-        while True:
-            if self.current_epoch + 1 == self.max_epochs:
                 self.fitted = True
 
             if self.fitted:
@@ -104,7 +105,7 @@ class Trainer:
                 train=True,
                 iter_len=train_len,
             )
-            if val_iter is not None:
+            if val_iter is not None and (self.current_epoch + 1) % self.val_every == 0:
                 _, val_summary = self._loop_epoch(
                     train_state,
                     fn=jax.pmap(self.val_fn, axis_name=self.axis_name),
@@ -122,7 +123,7 @@ class Trainer:
                 train_state, summary = callback.on_fit_epoch_end(self, train_state, summary)
 
         for callback in self._loop_callbacks():
-            train_state = callback.on_fit_start(self, train_state)
+            train_state = callback.on_fit_end(self, train_state)
 
         train_state = jax_utils.unreplicate(train_state)
         return train_state
@@ -139,8 +140,8 @@ class Trainer:
             train_state,
             fn=jax.pmap(self.test_fn or self.val_fn, axis_name=self.axis_name),
             iterator=test_iter,
-            prefix="train/",
-            train=True,
+            prefix="test/",
+            train=False,
             iter_len=test_len,
         )
 
@@ -152,6 +153,11 @@ class Trainer:
 
         return summary
 
+    def log_hyperparams(self, hparams):
+        for callback in self._loop_callbacks():
+            if hasattr(callback, "log_hyperparams"):
+                callback.log_hyperparams(hparams)
+
 
 #
 #  Register trainer to flax.serialization
@@ -161,7 +167,7 @@ def ty_to_state_dict(trainer: Trainer):
         "global_step": trainer.global_step,
         "current_epoch": trainer.current_epoch,
         "fitted": trainer.fitted,
-        "callbacks": {key: to_state_dict(callback) for key, callback in trainer.callbacks()},
+        "callbacks": {key: callback.to_state_dict() for key, callback in trainer.callbacks.items()},
     }
 
 
@@ -170,7 +176,7 @@ def ty_from_state_dict(trainer: Trainer, state: dict):
     trainer.current_epoch = state["current_epoch"]
     trainer.fitted = state["fitted"]
     trainer.callbacks = {
-        key: from_state_dict(callback, state["callbacks"][key])
+        key: callback.from_state_dict(state["callbacks"][key])
         for key, callback in trainer.callbacks.items()
     }
     trainer._sort_callbacks()

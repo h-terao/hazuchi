@@ -130,3 +130,5 @@ dmypy.json
 
 # Log files created by examples.
 out/
+*.sif
+~/
