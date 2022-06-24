@@ -23,8 +23,3 @@ class ProgressBar(callback.Callback):
         self._pbar.close()
         self._pbar = None
         return train_state
-
-    def finalize(self):
-        if self._pbar is not None:
-            self._pbar.close()
-            self._pbar = None
