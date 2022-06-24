@@ -173,6 +173,10 @@ class Trainer:
             if hasattr(callback, "log_hyperparams"):
                 callback.log_hyperparams(hparams)
 
+    def finalize(self):
+        for callback in self._loop_callbacks():
+            callback.finalize()
+
 
 #
 #  Register trainer to flax.serialization

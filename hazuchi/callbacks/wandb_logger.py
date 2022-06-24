@@ -1,5 +1,4 @@
 from __future__ import annotations
-import atexit
 
 from . import callback
 
@@ -24,7 +23,7 @@ class WandbLogger(callback.Callback):
     ):
         if not WANDB_AVAILABLE:
             raise ImportError(
-                "Fail to import wandb. To use wandb_logger, install wandb before running your script."  # noqa
+                "Fail to import wandb. To use WandbLogger, install wandb before running your script."  # noqa
             )
 
         self.kwargs = dict(kwargs, project=project, name=name)
@@ -43,7 +42,6 @@ class WandbLogger(callback.Callback):
                 # upload python codes.
                 wandb.run.log_code(root=self.code_dir)
 
-            atexit.register(wandb.finish)
         else:
             id = wandb.run.id
         self.id = id
@@ -53,6 +51,7 @@ class WandbLogger(callback.Callback):
         return train_state
 
     def on_test_start(self, trainer, train_state):
+        self.init_wandb()
         return self.on_fit_start(trainer, train_state)
 
     def on_fit_epoch_end(self, trainer, train_state, summary):
@@ -60,7 +59,8 @@ class WandbLogger(callback.Callback):
         return train_state, summary
 
     def on_test_epoch_end(self, trainer, train_state, summary):
-        return self.on_fit_epoch_end(trainer, train_state, summary)
+        wandb.log(summary, trainer.global_step, trainer.current_epoch)
+        return train_state, summary
 
     def log_hyperparams(self, params):
         if wandb.run is None:
@@ -79,3 +79,7 @@ class WandbLogger(callback.Callback):
     def from_state_dict(self, state):
         self.id = state["id"]
         return self
+
+    def finalize(self):
+        if wandb.run is not None:
+            wandb.finish()

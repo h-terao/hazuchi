@@ -42,6 +42,9 @@ class Callback:
     def from_state_dict(self, state):
         return self
 
+    def finalize(self):
+        pass
+
 
 register_serialization_state(
     Callback,
