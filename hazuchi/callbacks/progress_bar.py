@@ -24,6 +24,7 @@ class ProgressBar(callback.Callback):
         self._pbar = None
         return train_state
 
-    def __del__(self):
+    def finalize(self):
         if self._pbar is not None:
             self._pbar.close()
+            self._pbar = None
