@@ -43,7 +43,8 @@ class CometLogger(callback.Callback):
         if self._experiment is None:
             if self.experiment_id is None:
                 self._experiment = comet_ml.Experiment(project_name=self.project, **self._kwargs)
-                self._experiment.set_name(self.name)
+                if self.name is not None:
+                    self._experiment.set_name(self.name)
                 self._experiment.log_parameters(self._params)
                 self.experiment_id = self._experiment.id
             else:
