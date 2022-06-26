@@ -24,21 +24,20 @@ def split_batches(
             leaves, treedef = jax.tree_flatten(batch)
             min_batch_size = min(len(x) for x in leaves)
             min_main_size, min_remain_size = divmod(min_batch_size, num_devices)
-            min_main_size *= num_devices
 
             main_leaves, remain_leaves = [], []
             for x in leaves:
                 r = len(x) / min_batch_size
                 main_size, remain_size = int(r * min_main_size), int(r * min_remain_size)
-                assert main_size + remain_size == len(x)
+                assert main_size * num_devices + remain_size == len(x)
 
                 if main_size > 0:
-                    main_array = x[:main_size]
-                    main_leaves.append(main_array.reshape(num_devices, -1, *x.shape[1:]))
+                    main_array = x[remain_size:]
+                    main_leaves.append(main_array.reshape(num_devices, main_size, *x.shape[1:]))
 
                 if remain_size > 0:
-                    remain_array = x[main_size:].reshape(1, remain_size, *x.shape[1:])
-                    remain_leaves.append(jnp.repeat(remain_array, num_devices, axis=0))
+                    remain_array = x[:remain_size]
+                    remain_leaves.append(jnp.stack([remain_array] * num_devices))
 
             if main_leaves:
                 main_batch = jax.tree_unflatten(treedef, main_leaves)
