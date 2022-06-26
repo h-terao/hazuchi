@@ -41,7 +41,7 @@ def split_batches(
 
             if main_leaves:
                 main_batch = jax.tree_unflatten(treedef, main_leaves)
-                yield main_batch, min_main_size
+                yield main_batch, min_main_size * num_devices
 
             if remain_leaves:
                 remain_batch = jax.tree_unflatten(treedef, remain_leaves)
