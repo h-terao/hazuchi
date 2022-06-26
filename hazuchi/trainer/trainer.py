@@ -97,6 +97,8 @@ class Trainer:
         val_len: int | None = None,
     ):
         train_state = jax_utils.replicate(train_state, self.devices)
+        p_train_fn = jax.pmap(self.train_fn, axis_name=self.axis_name)
+        p_val_fn = jax.pmap(self.val_fn, axis_name=self.axis_name)
 
         for callback in self._loop_callbacks(reverse=True):
             train_state = callback.on_fit_start(self, train_state)
@@ -114,7 +116,7 @@ class Trainer:
 
             train_state, summary = self._loop_epoch(
                 train_state,
-                fn=jax.pmap(self.train_fn, axis_name=self.axis_name),
+                fn=p_train_fn,
                 iterator=train_iter,
                 prefix="train/",
                 train=True,
@@ -123,7 +125,7 @@ class Trainer:
             if val_iter is not None and (self.current_epoch + 1) % self.val_every == 0:
                 _, val_summary = self._loop_epoch(
                     train_state,
-                    fn=jax.pmap(self.val_fn, axis_name=self.axis_name),
+                    fn=p_val_fn,
                     iterator=val_iter,
                     prefix="val/",
                     train=False,
