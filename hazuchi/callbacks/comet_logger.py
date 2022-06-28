@@ -48,7 +48,9 @@ class CometLogger(callback.Callback):
                 self._experiment.log_parameters(self._params)
                 self.experiment_id = self._experiment.get_key()
             else:
-                self._experiment = comet_ml.ExistingExperiment(**self._kwargs)
+                self._experiment = comet_ml.ExistingExperiment(
+                    **self._kwargs, previous_experiment=self.experiment_id
+                )
                 self._experiment.log_parameters(self._params)
         return self._experiment
 
