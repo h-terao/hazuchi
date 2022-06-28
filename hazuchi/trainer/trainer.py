@@ -85,6 +85,8 @@ class Trainer:
                 scalars = fn(train_state, batch)
             accum_scalars = accumulate_scalars(accum_scalars, scalars, weight)
         summary = summarize_scalars(prefix, accum_scalars)
+        if train:
+            self.global_step += 1
         return train_state, summary
 
     def fit(
@@ -112,7 +114,6 @@ class Trainer:
 
             for callback in self._loop_callbacks():
                 train_state = callback.on_fit_epoch_start(self, train_state)
-                self.global_step += 1
 
             train_state, summary = self._loop_epoch(
                 train_state,
