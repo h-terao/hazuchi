@@ -78,7 +78,9 @@ class Trainer:
 
     def _loop_epoch(self, train_state, fn, iterator, prefix, train: bool, iter_len=None):
         accum_scalars = {}
-        for batch, weight in split_batches(iterator, iter_len, self.prefetch, self.devices):
+        for batch, weight in split_batches(
+            iterator, iter_len, self.prefetch, self.devices, train=train
+        ):
             if train:
                 train_state, scalars = fn(train_state, batch)
             else:

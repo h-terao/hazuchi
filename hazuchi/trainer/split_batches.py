@@ -6,7 +6,11 @@ from flax import jax_utils
 
 
 def split_batches(
-    iterator, limit: int | None = None, prefetch: bool = False, devices: list | None = None
+    iterator,
+    limit: int | None = None,
+    prefetch: bool = False,
+    devices: list | None = None,
+    train: bool = False,
 ):
     """
     Args:
@@ -15,6 +19,7 @@ def split_batches(
         prefetch (bool): If True, prefetch batches on the devices.
             It is useful to accelerate training when you use GPUs.
         devices: Devices.
+        train: If True, raise Error when batch size is not divisible by len(devices).
     """
     devices = devices or jax_utils._pmap_device_order()
     num_devices = len(devices)
@@ -36,6 +41,14 @@ def split_batches(
                     main_leaves.append(main_array.reshape(num_devices, main_size, *x.shape[1:]))
 
                 if remain_size > 0:
+                    if train:
+                        raise ValueError(
+                            (
+                                "Batch size shouled be divisible by the number of devices "
+                                f"in the train phase. Expected batch_size%num_devices==0, "
+                                f"but {len(x)}%{num_devices}!=0"
+                            )
+                        )
                     remain_array = x[:remain_size]
                     remain_leaves.append(jnp.stack([remain_array] * num_devices))
 
